@@ -1,0 +1,42 @@
+name: trip-wise
+services:
+  - name: web
+    environment_slug: python
+    github:
+      branch: backend
+      deploy_on_push: true
+      repo: leanhdung0505/tripwise-backend
+    build_command: pip install -r requirements.txt
+    run_command: gunicorn app.main:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
+    envs:
+      - key: PROJECT_NAME
+        value: "TripWise"
+      - key: ENVIRONMENT
+        value: "production"
+      - key: SECRET_KEY
+        value: "qfNNNFfV9jB28I02hglyYOgA0AQBrKFhu9sjnGnjX4o"
+      - key: FIRST_SUPERUSER
+        value: "admin@example.com"
+      - key: FIRST_SUPERUSER_PASSWORD
+        value: "admin123"
+      - key: POSTGRES_USER
+        value: "avnadmin"
+      - key: POSTGRES_PASSWORD
+        value: "AVNS_CLP_YmAqEuAU5yJ0o3f"
+      - key: POSTGRES_DB
+        value: "travel-plan"
+      - key: POSTGRES_PORT
+        value: "24099"
+      - key: POSTGRES_SERVER
+        value: "pg-c194625-dung0158234-3aca.k.aivencloud.com"
+      - key: SMTP_HOST
+        value: "smtp.zoho.com"
+      - key: SMTP_USER
+        value: "anhdungdeptrai@zohogmail.com"
+      - key: SMTP_PASSWORD
+        value: "d2RBAwfYTMTj"
+      - key: EMAILS_FROM_EMAIL
+        value: "anhdungdeptrai@zohogmail.com"
+    instance_size_slug: basic-xxs
+    health_check:
+      http_path: /api/v1/utils/health-check

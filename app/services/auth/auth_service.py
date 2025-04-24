@@ -1,0 +1,66 @@
+from datetime import timedelta
+from fastapi import HTTPException, status
+from sqlmodel import Session
+
+from app.crud.users.crud_user import crud_user
+from app.core.config import settings
+from app.core.security import create_access_token, get_password, verify_password
+from app.models import Token, Message, ChangePassword, NewPassword
+
+class AuthService:
+    @staticmethod
+    def login_access_token(session: Session, email: str, password: str) -> Token:
+        user = crud_user.authenticate(session=session, email=email, password=password)
+        if not user:
+            raise HTTPException(
+                status_code=400, 
+                detail="Incorrect email or password"
+            )
+
+        access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        token = create_access_token(user.user_id, expires_delta=access_token_expires)
+        return Token(access_token=token)
+
+    @staticmethod
+    def change_password(
+        session: Session,
+        current_user,
+        data: ChangePassword
+    ) -> Message:
+        """Change password for logged in user"""
+        if not verify_password(data.old_password, current_user.password):
+            raise HTTPException(
+                status_code=400,
+                detail="Incorrect current password"
+            )
+
+        if data.old_password == data.new_password:
+            raise HTTPException(
+                status_code=400,
+                detail="New password must be different from current password"
+            )
+
+        current_user.password = get_password(data.new_password)
+        session.add(current_user)
+        session.commit()
+        return Message(message="Password changed successfully")
+
+    @staticmethod
+    def reset_password_by_email(
+        session: Session,
+        body: NewPassword
+    ) -> Message:
+        """Reset password after email verification through OTP"""
+        user = crud_user.get_by_email(session=session, email=body.email)
+        if not user:
+            raise HTTPException(
+                status_code=404,
+                detail="User not found"
+            )
+
+        user.password = get_password(body.new_password)
+        session.add(user)
+        session.commit()
+        return Message(message="Password reset successfully")
+
+auth_service = AuthService()

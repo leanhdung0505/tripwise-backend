@@ -1,0 +1,563 @@
+import uuid
+from datetime import datetime, date as date_type, time as time_type
+from typing import List, Dict, Any, Literal, Optional
+from pydantic import EmailStr, Field as PydanticField
+from sqlmodel import Field, Relationship, SQLModel
+from sqlalchemy import Column, UniqueConstraint, Text, Time, Date
+from sqlalchemy.dialects.postgresql import JSONB, UUID, ARRAY
+
+
+# Database Models
+class Users(SQLModel, table=True):
+    __tablename__ = "users"
+
+    user_id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    username: str = Field(max_length=50, unique=True)
+    email: str = Field(max_length=100, unique=True)
+    password: str = Field(max_length=255)  # Changed from password_hash to match SQL
+    full_name: str = Field(max_length=100)
+    role: str = Field(max_length=20, default="user")  # Added to match SQL
+    profile_picture: str | None = Field(max_length=255, default=None)  # Changed from avt_img
+    preferences: Dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
+    budget_preference: int | None = Field(default=None)
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+
+    # Relationships
+    itineraries: List["Itineraries"] = Relationship(back_populates="user")
+
+
+class Places(SQLModel, table=True):
+    __tablename__ = "places"
+
+    place_id: int = Field(default=None, primary_key=True)
+    name: str = Field(max_length=100)
+    local_name: str | None = Field(max_length=100, default=None)
+    description: str | None = Field(sa_column=Column(Text), default=None)
+    type: str = Field(max_length=50)  # RESTAURANT, HOTEL, ATTRACTION
+    address: str | None = Field(sa_column=Column(Text), default=None)
+    city: str = Field(max_length=100)
+    latitude: float = Field()
+    longitude: float = Field()
+    rating: float | None = Field(default=None)
+    price_range: str | None = Field(max_length=20, default=None)
+    phone: str | None = Field(max_length=30, default=None)
+    email: str | None = Field(max_length=100, default=None)
+    website: str | None = Field(max_length=255, default=None)
+    web_url: str | None = Field(max_length=255, default=None)
+    image: str | None = Field(max_length=255, default=None)
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+
+    # Relationships
+    photos: List["PlacePhotos"] = Relationship(back_populates="place")
+    restaurant_detail: "RestaurantDetails" | None = Relationship(back_populates="place")
+    hotel_detail: "HotelDetails" | None = Relationship(back_populates="place")
+    attraction_detail: "AttractionDetails" | None = Relationship(back_populates="place")
+    itinerary_activities: List["ItineraryActivities"] = Relationship(back_populates="place")
+    hotel_stays: List["ItineraryDays"] = Relationship(back_populates="hotel")
+
+
+class PlacePhotos(SQLModel, table=True):
+    __tablename__ = "place_photos"
+
+    photo_id: int = Field(default=None, primary_key=True)
+    place_id: int = Field(foreign_key="places.place_id")
+    photo_url: str = Field(max_length=255)
+    is_primary: bool = Field(default=False)
+    created_at: datetime = Field(default_factory=datetime.now)
+
+    # Relationships
+    place: Places = Relationship(back_populates="photos")
+
+
+class RestaurantDetails(SQLModel, table=True):
+    __tablename__ = "restaurant_details"
+
+    restaurant_detail_id: int = Field(default=None, primary_key=True)
+    place_id: int = Field(foreign_key="places.place_id")
+    meal_types: List[str] = Field(sa_column=Column(ARRAY(Text)))
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+
+    # Relationships
+    place: Places = Relationship(back_populates="restaurant_detail")
+
+
+class HotelDetails(SQLModel, table=True):
+    __tablename__ = "hotel_details"
+
+    hotel_detail_id: int = Field(default=None, primary_key=True)
+    place_id: int = Field(foreign_key="places.place_id")
+    star_rating: int | None = Field(default=None)
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+
+    # Relationships
+    place: Places = Relationship(back_populates="hotel_detail")
+
+
+class AttractionDetails(SQLModel, table=True):
+    __tablename__ = "attraction_details"
+
+    attraction_detail_id: int = Field(default=None, primary_key=True)
+    place_id: int = Field(foreign_key="places.place_id")
+    subcategory: Dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
+    subtype: Dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+
+    # Relationships
+    place: Places = Relationship(back_populates="attraction_detail")
+
+
+class Itineraries(SQLModel, table=True):
+    __tablename__ = "itineraries"
+
+    itinerary_id: int = Field(default=None, primary_key=True)
+    user_id: uuid.UUID = Field(foreign_key="users.user_id")
+    title: str = Field(max_length=100)
+    description: str | None = Field(sa_column=Column(Text), default=None)
+    start_date: date_type = Field(sa_column=Column(Date))
+    end_date: date_type = Field(sa_column=Column(Date))
+    budget: int | None = Field(default=None)
+    destination_city: str = Field(max_length=100, default="Da Nang")
+    is_favorite: bool = Field(default=False)
+    is_completed: bool = Field(default=False)
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+
+    # Relationships
+    user: Users = Relationship(back_populates="itineraries")
+    days: List["ItineraryDays"] = Relationship(back_populates="itinerary")
+
+
+class ItineraryDays(SQLModel, table=True):
+    __tablename__ = "itinerary_days"
+
+    day_id: int = Field(default=None, primary_key=True)
+    itinerary_id: int = Field(foreign_key="itineraries.itinerary_id")
+    day_number: int = Field()
+    date: date_type = Field(sa_column=Column(Date))
+    hotel_id: int | None = Field(foreign_key="places.place_id", default=None)
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+
+    # Relationships
+    itinerary: Itineraries = Relationship(back_populates="days")
+    hotel: Places | None = Relationship(back_populates="hotel_stays")
+    activities: List["ItineraryActivities"] = Relationship(back_populates="day")
+
+
+class ItineraryActivities(SQLModel, table=True):
+    __tablename__ = "itinerary_activities"
+
+    itinerary_activity_id: int = Field(default=None, primary_key=True)
+    day_id: int = Field(foreign_key="itinerary_days.day_id")
+    place_id: int = Field(foreign_key="places.place_id")
+    start_time: time_type = Field(sa_column=Column(Time))
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+
+    # Relationships
+    day: ItineraryDays = Relationship(back_populates="activities")
+    place: Places = Relationship(back_populates="itinerary_activities")
+
+
+# API Request/Response Models
+class UserBase(SQLModel):
+    username: str
+    email: str
+    full_name: str
+
+
+class UserPublic(UserBase):
+    user_id: uuid.UUID
+    role: str = "user"
+    profile_picture: str | None = None
+    preferences: Dict[str, Any] | None = None
+    budget_preference: int | None = None
+    created_at: datetime
+
+
+class UsersPublic(SQLModel):
+    data: List[UserPublic]
+    count: int
+
+
+class UserLogin(SQLModel):
+    username: str
+    password: str
+
+
+class UserCreate(UserBase):
+    username : str
+    email : EmailStr
+    password: str
+    role: str = "user"
+    full_name : str
+
+
+class UserUpdate(SQLModel):
+    username: str | None = None
+    email: str | None = None
+    full_name: str | None = None
+    profile_picture: str | None = None
+    role: str | None = None
+    preferences: Dict[str, Any] | None = None
+    budget_preference: int | None = None
+
+
+class UserUpdateMe(SQLModel):
+    username: str | None = None
+    email: str | None = None
+    full_name: str | None = None
+    profile_picture: str | None = None
+    preferences: Dict[str, Any] | None = None
+    budget_preference: int | None = None
+    # Users cannot update their own role
+
+
+class UserResponse(UserPublic):
+    pass
+
+
+class PlaceBase(SQLModel):
+    name: str
+    local_name: str | None = None
+    description: str | None = None
+    type: str
+    address: str | None = None
+    city: str
+    latitude: float
+    longitude: float
+    rating: float | None = None
+    price_range: str | None = None
+    phone: str | None = None
+    email: str | None = None
+    website: str | None = None
+    web_url: str | None = None
+    image: str | None = None
+
+
+class PlaceCreate(PlaceBase):
+    pass
+
+
+class PlaceUpdate(SQLModel):
+    name: str | None = None
+    local_name: str | None = None
+    description: str | None = None
+    type: str | None = None
+    address: str | None = None
+    city: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
+    rating: float | None = None
+    price_range: str | None = None
+    phone: str | None = None
+    email: str | None = None
+    website: str | None = None
+    web_url: str | None = None
+    image: str | None = None
+
+
+class PlacePhotoBase(SQLModel):
+    photo_url: str
+    is_primary: bool = False
+
+
+class PlacePhotoCreate(PlacePhotoBase):
+    pass
+
+
+class PlacePhotoResponse(PlacePhotoBase):
+    photo_id: int
+    place_id: int
+    created_at: datetime
+
+
+class RestaurantDetailBase(SQLModel):
+    meal_types: List[str]
+
+
+class RestaurantDetailCreate(RestaurantDetailBase):
+    pass
+
+
+class RestaurantDetailUpdate(SQLModel):
+    meal_types: List[str] | None = None
+
+
+class RestaurantDetailResponse(RestaurantDetailBase):
+    restaurant_detail_id: int
+    place_id: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class HotelDetailBase(SQLModel):
+    star_rating: int | None = None
+
+
+class HotelDetailCreate(HotelDetailBase):
+    pass
+
+
+class HotelDetailUpdate(SQLModel):
+    star_rating: int | None = None
+
+
+class HotelDetailResponse(HotelDetailBase):
+    hotel_detail_id: int
+    place_id: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class AttractionDetailBase(SQLModel):
+    subcategory: Dict[str, Any] | None = None
+    subtype: Dict[str, Any] | None = None
+
+
+class AttractionDetailCreate(AttractionDetailBase):
+    pass
+
+
+class AttractionDetailUpdate(SQLModel):
+    subcategory: Dict[str, Any] | None = None
+    subtype: Dict[str, Any] | None = None
+
+
+class AttractionDetailResponse(AttractionDetailBase):
+    attraction_detail_id: int
+    place_id: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class PlaceResponse(PlaceBase):
+    place_id: int
+    created_at: datetime
+    updated_at: datetime
+    photos: List[PlacePhotoResponse] | None = None
+    restaurant_detail: RestaurantDetailResponse | None = None
+    hotel_detail: HotelDetailResponse | None = None
+    attraction_detail: AttractionDetailResponse | None = None
+
+
+class ItineraryBase(SQLModel):
+    title: str
+    description: str | None = None
+    start_date: date_type
+    end_date: date_type
+    budget: int | None = None
+    destination_city: str = "Da Nang"
+    is_favorite: bool = False
+    is_completed: bool = False
+
+
+class ItineraryCreate(ItineraryBase):
+    pass
+
+
+class ItineraryUpdate(SQLModel):
+    title: str | None = None
+    description: str | None = None
+    start_date: date_type | None = None
+    end_date: date_type | None = None
+    budget: int | None = None
+    destination_city: str | None = None
+    is_favorite: bool | None = None
+    is_completed: bool | None = None
+
+
+class ItineraryDayBase(SQLModel):
+    day_number: int
+    date: date_type
+    hotel_id: int | None = None
+
+
+class ItineraryDayCreate(ItineraryDayBase):
+    pass
+
+
+class ItineraryDayUpdate(SQLModel):
+    day_number: int | None = None
+    date: date_type | None = None
+    hotel_id: int | None = None
+
+
+class ItineraryActivityBase(SQLModel):
+    place_id: int
+    start_time: time_type
+
+
+class ItineraryActivityCreate(ItineraryActivityBase):
+    pass
+
+
+class ItineraryActivityUpdate(SQLModel):
+    place_id: int | None = None
+    start_time: time_type | None = None
+
+
+class ItineraryActivityResponse(ItineraryActivityBase):
+    itinerary_activity_id: int
+    day_id: int
+    created_at: datetime
+    updated_at: datetime
+    place: PlaceResponse
+
+
+class ItineraryDayResponse(ItineraryDayBase):
+    day_id: int
+    itinerary_id: int
+    created_at: datetime
+    updated_at: datetime
+    hotel: PlaceResponse | None = None
+    activities: List[ItineraryActivityResponse] | None = None
+
+
+class ItineraryResponse(ItineraryBase):
+    itinerary_id: int
+    user_id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+    days: List[ItineraryDayResponse] | None = None
+
+
+# Authentication models
+class Token(SQLModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
+class TokenPayload(SQLModel):
+    sub: str | None = None
+
+
+class ChangePassword(SQLModel):
+    old_password: str
+    new_password: str = PydanticField(
+        min_length=8,
+        max_length=40,
+        description="New password must be between 8 and 40 characters"
+    )
+
+
+class NewPassword(SQLModel):
+    email: EmailStr = PydanticField(
+        description="Email that was verified through OTP"
+    )
+    new_password: str = PydanticField(
+        min_length=8,
+        max_length=40,
+        description="New password must be between 8 and 40 characters"
+    )
+
+
+class OTPRequest(SQLModel):
+    email: EmailStr
+    purpose: Literal["register", "recovery"]
+
+
+class OTPResponse(SQLModel):
+    msg: str
+    token: str
+
+
+class OTPVerify(SQLModel):
+    token: str
+    otp_code: str = PydanticField(..., min_length=6, max_length=6, regex="^[0-9]+$")
+
+
+class OTPVerifyResponse(SQLModel):
+    msg: str
+    email: EmailStr
+
+
+class Message(SQLModel):
+    message: str
+
+
+__all__ = [
+    # Database Models
+    "Users",
+    "Places",
+    "PlacePhotos",
+    "RestaurantDetails",
+    "HotelDetails",
+    "AttractionDetails",
+    "Itineraries",
+    "ItineraryDays",
+    "ItineraryActivities",
+    
+    # User Models
+    "UserBase",
+    "UserPublic",
+    "UsersPublic",
+    "UserLogin",
+    "UserCreate",
+    "UserUpdate",
+    "UserUpdateMe",
+    "UserResponse",
+    
+    # Place Models
+    "PlaceBase",
+    "PlaceCreate", 
+    "PlaceUpdate",
+    "PlaceResponse",
+    
+    # Place Photos Models
+    "PlacePhotoBase",
+    "PlacePhotoCreate",
+    "PlacePhotoResponse",
+    
+    # Restaurant Details Models
+    "RestaurantDetailBase",
+    "RestaurantDetailCreate",
+    "RestaurantDetailUpdate",
+    "RestaurantDetailResponse",
+    
+    # Hotel Details Models
+    "HotelDetailBase",
+    "HotelDetailCreate",
+    "HotelDetailUpdate",
+    "HotelDetailResponse",
+    
+    # Attraction Details Models
+    "AttractionDetailBase",
+    "AttractionDetailCreate",
+    "AttractionDetailUpdate",
+    "AttractionDetailResponse",
+    
+    # Itinerary Models
+    "ItineraryBase",
+    "ItineraryCreate",
+    "ItineraryUpdate",
+    "ItineraryResponse",
+    
+    # Itinerary Day Models
+    "ItineraryDayBase",
+    "ItineraryDayCreate",
+    "ItineraryDayUpdate",
+    "ItineraryDayResponse",
+    
+    # Itinerary Activity Models
+    "ItineraryActivityBase",
+    "ItineraryActivityCreate",
+    "ItineraryActivityUpdate",
+    "ItineraryActivityResponse",
+    
+    # Authentication Models
+    "Token",
+    "TokenPayload",
+    "ChangePassword",
+    "NewPassword",
+    "OTPRequest",
+    "OTPResponse",
+    "OTPVerify",
+    "OTPVerifyResponse",
+    "Message"
+]
