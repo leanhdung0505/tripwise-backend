@@ -32,11 +32,11 @@ services:
       - key: SMTP_HOST
         value: "smtp.zoho.com"
       - key: SMTP_USER
-        value: "anhdungdeptrai@zohogmail.com"
+        value: "anhdungdeptrai@zohomail.com"
       - key: SMTP_PASSWORD
         value: "d2RBAwfYTMTj"
       - key: EMAILS_FROM_EMAIL
-        value: "anhdungdeptrai@zohogmail.com"
+        value: "anhdungdeptrai@zohomail.com"
     instance_size_slug: basic-xxs
     health_check:
       http_path: /api/v1/utils/health-check

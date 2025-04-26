@@ -51,9 +51,9 @@ class Places(SQLModel, table=True):
 
     # Relationships
     photos: List["PlacePhotos"] = Relationship(back_populates="place")
-    restaurant_detail: "RestaurantDetails" | None = Relationship(back_populates="place")
-    hotel_detail: "HotelDetails" | None = Relationship(back_populates="place")
-    attraction_detail: "AttractionDetails" | None = Relationship(back_populates="place")
+    restaurant_detail: Optional["RestaurantDetails"] = Relationship(back_populates="place")
+    hotel_detail: Optional["HotelDetails"] | None = Relationship(back_populates="place")
+    attraction_detail: Optional["AttractionDetails"] | None = Relationship(back_populates="place")
     itinerary_activities: List["ItineraryActivities"] = Relationship(back_populates="place")
     hotel_stays: List["ItineraryDays"] = Relationship(back_populates="hotel")
 
@@ -89,7 +89,6 @@ class HotelDetails(SQLModel, table=True):
 
     hotel_detail_id: int = Field(default=None, primary_key=True)
     place_id: int = Field(foreign_key="places.place_id")
-    star_rating: int | None = Field(default=None)
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
 
@@ -197,6 +196,13 @@ class UserCreate(UserBase):
     role: str = "user"
     full_name : str
 
+class UserRegister(SQLModel):
+    username: str
+    email: EmailStr
+    password: str
+    full_name: str
+    role: str = "user"
+
 
 class UserUpdate(SQLModel):
     username: str | None = None
@@ -297,16 +303,14 @@ class RestaurantDetailResponse(RestaurantDetailBase):
 
 
 class HotelDetailBase(SQLModel):
-    star_rating: int | None = None
-
+    pass
 
 class HotelDetailCreate(HotelDetailBase):
     pass
 
 
 class HotelDetailUpdate(SQLModel):
-    star_rating: int | None = None
-
+    pass
 
 class HotelDetailResponse(HotelDetailBase):
     hotel_detail_id: int
@@ -469,7 +473,7 @@ class OTPResponse(SQLModel):
 
 class OTPVerify(SQLModel):
     token: str
-    otp_code: str = PydanticField(..., min_length=6, max_length=6, regex="^[0-9]+$")
+    otp_code: str = PydanticField(..., min_length=6, max_length=6, pattern="^[0-9]+$")
 
 
 class OTPVerifyResponse(SQLModel):

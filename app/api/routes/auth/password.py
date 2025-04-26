@@ -18,7 +18,7 @@ def change_password(
     Change password for logged in user.
     Requires authentication.
     """
-    if not verify_password(data.old_password, current_user.password_hash):
+    if not verify_password(data.old_password, current_user.password):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Incorrect current password"
@@ -30,7 +30,7 @@ def change_password(
             detail="New password must be different from current password"
         )
 
-    current_user.password_hash = get_password_hash(data.new_password)
+    current_user.password = get_password_hash(data.new_password)
     session.add(current_user)
     session.commit()
     return Message(message="Password changed successfully")
