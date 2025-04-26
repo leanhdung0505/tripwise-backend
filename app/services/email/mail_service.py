@@ -17,7 +17,7 @@ class EmailData:
     html_content: str
 
 def render_email_template(template_name: str, context: dict[str, Any]) -> str:
-    template_path = Path(__file__).parent.parent / "email-templates" / "build" / template_name
+    template_path = Path(__file__).parent.parent.parent / "email-templates" / "build" / template_name
     try:
         template_str = template_path.read_text(encoding="utf-8")
         return Template(template_str).render(context)
@@ -41,7 +41,7 @@ def send_email(email_to: str, subject: str, html_content: str) -> None:
         "user": settings.SMTP_USER,
         "password": settings.SMTP_PASSWORD,
     }
-    
+    logger.error(f"{smtp_options}")
     try:
         response = message.send(to=email_to, smtp={k: v for k, v in smtp_options.items() if v})
         if not response.status_code == 250:

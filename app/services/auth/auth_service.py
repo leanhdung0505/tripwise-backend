@@ -4,7 +4,7 @@ from sqlmodel import Session
 
 from app.crud.users.crud_user import crud_user
 from app.core.config import settings
-from app.core.security import create_access_token, get_password, verify_password
+from app.core.security import create_access_token, get_password_hash, verify_password
 from app.models import Token, Message, ChangePassword, NewPassword
 
 class AuthService:
@@ -40,7 +40,7 @@ class AuthService:
                 detail="New password must be different from current password"
             )
 
-        current_user.password = get_password(data.new_password)
+        current_user.password = get_password_hash(data.new_password)
         session.add(current_user)
         session.commit()
         return Message(message="Password changed successfully")
@@ -58,7 +58,7 @@ class AuthService:
                 detail="User not found"
             )
 
-        user.password = get_password(body.new_password)
+        user.password = get_password_hash(body.new_password)
         session.add(user)
         session.commit()
         return Message(message="Password reset successfully")

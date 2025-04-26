@@ -28,6 +28,7 @@ def init_db(session: Session) -> None:
             email=settings.FIRST_SUPERUSER,
             password=settings.FIRST_SUPERUSER_PASSWORD,
             full_name="System Administrator",
+            role = 'admin'
         )
         logger.info(f"Creating user with data: {user_in.model_dump()}")
         crud.create_user(session=session, user_create=user_in)
