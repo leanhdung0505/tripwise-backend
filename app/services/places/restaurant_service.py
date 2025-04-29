@@ -87,6 +87,6 @@ class RestaurantService:
             )
         
         crud_restaurant.delete_by_place_id(session=session, place_id=place_id)
-        return Message(message="Restaurant detail deleted successfully")
+        return Message(detail="Restaurant detail deleted successfully")
 
 restaurant_service = RestaurantService()

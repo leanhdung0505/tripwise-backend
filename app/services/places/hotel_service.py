@@ -87,6 +87,6 @@ class HotelService:
             )
         
         crud_hotel_detail.delete_by_place_id(session=session, place_id=place_id)
-        return Message(message="Hotel detail deleted successfully")
+        return Message(detail="Hotel detail deleted successfully")
 
 hotel_service = HotelService()

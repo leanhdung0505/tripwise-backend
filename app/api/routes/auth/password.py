@@ -33,7 +33,7 @@ def change_password(
     current_user.password = get_password_hash(data.new_password)
     session.add(current_user)
     session.commit()
-    return Message(message="Password changed successfully")
+    return Message(detail="Password changed successfully")
 
 
 @router.post("/reset-by-email", response_model=Message)
@@ -55,4 +55,4 @@ def reset_password(
     user.password_hash = get_password_hash(body.new_password)
     session.add(user)
     session.commit()
-    return Message(message="Password reset successfully")
+    return Message(detail="Password reset successfully")

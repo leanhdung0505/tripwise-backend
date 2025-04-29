@@ -4,7 +4,8 @@ import logging
 
 from app import crud
 from app.core.config import settings
-from app.models import Users, UserCreate
+from app.models import Users
+from app.repository.request.user_request import UserCreate
 
 logger = logging.getLogger(__name__)
 
