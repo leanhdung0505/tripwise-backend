@@ -1,4 +1,5 @@
 from typing import Optional, List
+from sqlalchemy import func
 from sqlmodel import Session, select
 from app.models import AttractionDetails, AttractionDetailCreate, AttractionDetailUpdate
 
@@ -42,6 +43,9 @@ class CRUDAttraction:
         if db_obj:
             session.delete(db_obj)
             session.commit()
+    def get_count(self, session: Session) -> int:
+        result = session.exec(select(func.count()).select_from(AttractionDetails))
+        return result.one()
 
 # Create and export an instance
 crud_attraction = CRUDAttraction()

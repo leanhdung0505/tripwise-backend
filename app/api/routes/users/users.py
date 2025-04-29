@@ -1,29 +1,29 @@
 # app/api/routes/user/users.py
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Body, Depends, logger
 from app.api.deps import CurrentUser, SessionDep
-from app.models import UserPublic, UserUpdateMe, Message, ChangePassword
+from app.models import Message, ChangePassword
 from app.services.users.user_service import user_service
 from app.services.auth.auth_service import auth_service
-
+from app.repository.response.user_response import UserResponse, UserUpdateMe
+from app.repository.request.user_request import UserUpdate
 router = APIRouter(prefix="/users", tags=["users"])
 
 
-@router.get("/me", response_model=UserPublic)
-def read_user_me(current_user: CurrentUser) -> UserPublic:
+@router.get("/me", response_model=UserResponse)
+def read_user_me(current_user: CurrentUser) -> UserResponse:
     """
     Get current user information.
     """
-    return current_user
+    return UserResponse(data=current_user)
 
-
-@router.patch("/me", response_model=UserPublic)
+@router.patch("/me", response_model=UserUpdateMe)
 def update_user_me(
     *,
     session: SessionDep,
-    user_in: UserUpdateMe,
+    user_in: UserUpdate = Body(...),
     current_user: CurrentUser
-) -> UserPublic:
+) -> UserUpdateMe:
     """
     Update current user information.
     """
@@ -64,5 +64,4 @@ def delete_user_me(
         session=session,
         current_user=current_user
     )
-
 

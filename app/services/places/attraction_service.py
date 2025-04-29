@@ -1,9 +1,9 @@
 from fastapi import HTTPException, status
 from sqlmodel import Session
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from app.models import (
     AttractionDetails, AttractionDetailCreate, AttractionDetailUpdate, 
-    AttractionDetailResponse, Message
+    AttractionDetailResponse, AttractionDetailPublic, Message, PaginatedResponse, PaginationMetadata
 )
 from app.crud.places.crud_attraction import crud_attraction
 from app.services.places.place_service import place_service
@@ -30,8 +30,33 @@ class AttractionService:
             )
         return attraction_detail
     
-    def get_attraction_details(self, session: Session, skip: int = 0, limit: int = 100) -> List[AttractionDetails]:
-        return crud_attraction.get_multi(session=session, skip=skip, limit=limit)
+    def get_attraction_details(
+        self, 
+        session: Session, 
+        page: int = 1, 
+        limit: int = 10
+    ) -> Tuple[List[AttractionDetails], PaginationMetadata]:
+        # Calculate skip value based on page and limit
+        skip = (page - 1) * limit
+        
+        # Get total count
+        total_count = crud_attraction.get_count(session=session)
+        
+        # Get attraction details for the current page
+        attraction_details = crud_attraction.get_multi(session=session, skip=skip, limit=limit)
+        
+        # Create pagination metadata
+        has_prev = page > 1
+        has_next = (page * limit) < total_count
+        
+        pagination = PaginationMetadata(
+            page=page,
+            limit=limit,
+            has_prev=has_prev,
+            has_next=has_next
+        )
+        
+        return attraction_details, pagination
     
     def create_attraction_detail(self, session: Session, place_id: int, attraction_detail_in: AttractionDetailCreate) -> AttractionDetails:
         # Check if place exists and is an attraction
@@ -87,6 +112,6 @@ class AttractionService:
             )
         
         crud_attraction.delete_by_place_id(session=session, place_id=place_id)
-        return Message(message="Attraction detail deleted successfully")
+        return Message(detail="Attraction detail deleted successfully")
 
 attraction_service = AttractionService()

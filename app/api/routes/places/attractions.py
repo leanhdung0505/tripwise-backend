@@ -2,23 +2,33 @@ from fastapi import APIRouter, Depends
 from typing import List
 from app.api.deps import CurrentUser, SessionDep, get_current_user
 from app.models import (
-    AttractionDetailResponse, AttractionDetailCreate, AttractionDetailUpdate, Message
+    AttractionDetailResponse, AttractionDetailCreate, AttractionDetailUpdate, 
+    Message, PaginatedResponse, AttractionDetailPublic
 )
 from app.services.places.attraction_service import attraction_service
 
 router = APIRouter(prefix="/attractions", tags=["attractions"])
 
-@router.get("", response_model=List[AttractionDetailResponse])
+@router.get("", response_model=PaginatedResponse[AttractionDetailPublic])
 def read_attraction_details(
     *,
     session: SessionDep,
-    skip: int = 0,
-    limit: int = 100
-) -> List[AttractionDetailResponse]:
+    page: int = 1,
+    limit: int = 10
+) -> PaginatedResponse[AttractionDetailPublic]:
     """
-    Get all attraction details.
+    Get all attraction details with pagination.
     """
-    return attraction_service.get_attraction_details(session=session, skip=skip, limit=limit)
+    attraction_details, pagination = attraction_service.get_attraction_details(
+        session=session, 
+        page=page, 
+        limit=limit
+    )
+    
+    return PaginatedResponse(
+        data=attraction_details,
+        pagination=pagination
+    )
 
 @router.get("/{place_id}", response_model=AttractionDetailResponse)
 def read_attraction_detail(
@@ -29,7 +39,9 @@ def read_attraction_detail(
     """
     Get attraction details for a specific place.
     """
-    return attraction_service.get_attraction_detail_by_place(session=session, place_id=place_id)
+    return AttractionDetailResponse(
+        data=attraction_service.get_attraction_detail_by_place(session=session, place_id=place_id)
+    )
 
 @router.post("/{place_id}", response_model=AttractionDetailResponse)
 def create_attraction_detail(
@@ -42,10 +54,12 @@ def create_attraction_detail(
     """
     Create attraction details for a place (admin only).
     """
-    return attraction_service.create_attraction_detail(
-        session=session, 
-        place_id=place_id, 
-        attraction_detail_in=attraction_detail_in
+    return AttractionDetailResponse(
+        data=attraction_service.create_attraction_detail(
+            session=session, 
+            place_id=place_id, 
+            attraction_detail_in=attraction_detail_in
+        )
     )
 
 @router.put("/{place_id}", response_model=AttractionDetailResponse)
@@ -59,10 +73,12 @@ def update_attraction_detail(
     """
     Update attraction details for a place (admin only).
     """
-    return attraction_service.update_attraction_detail(
-        session=session, 
-        place_id=place_id, 
-        attraction_detail_in=attraction_detail_in
+    return AttractionDetailResponse(
+        data=attraction_service.update_attraction_detail(
+            session=session, 
+            place_id=place_id, 
+            attraction_detail_in=attraction_detail_in
+        )
     )
 
 @router.delete("/{place_id}", response_model=Message)
