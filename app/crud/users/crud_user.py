@@ -1,8 +1,9 @@
+from datetime import datetime
 from typing import Optional
 from sqlmodel import Session, select
 from app.core.security import get_password_hash, verify_password
-from app.models import Users, UserCreate, UserUpdate
-
+from app.models import Users
+from app.repository.request.user_request import UserCreate, UserUpdate
 class CRUDUser:
     def get_by_email(self, session: Session, email: str) -> Optional[Users]:
         return session.exec(select(Users).where(Users.email == email)).first()
@@ -22,6 +23,7 @@ class CRUDUser:
 
     def update(self, session: Session, db_user: Users, user_in: UserUpdate) -> Users:
         update_data = user_in.model_dump(exclude_unset=True)
+        db_user.updated_at = datetime.now()
         db_user.sqlmodel_update(update_data)
         session.add(db_user)
         session.commit()

@@ -1,10 +1,27 @@
 import uuid
 from datetime import datetime, date as date_type, time as time_type
-from typing import List, Dict, Any, Literal, Optional
+from typing import List, Dict, Any, Literal, Optional, TypeVar, Generic
 from pydantic import EmailStr, Field as PydanticField
 from sqlmodel import Field, Relationship, SQLModel
 from sqlalchemy import Column, UniqueConstraint, Text, Time, Date
 from sqlalchemy.dialects.postgresql import JSONB, UUID, ARRAY
+
+
+# Generic Response Model with data wrapper
+T = TypeVar('T')
+
+class ResponseWrapper(SQLModel, Generic[T]):
+    data: T
+class PaginationMetadata(SQLModel):
+    page: int
+    limit: int
+    has_prev: bool
+    has_next: bool
+
+class PaginatedResponse(SQLModel, Generic[T]):
+    data: List[T]
+    pagination: PaginationMetadata
+
 
 
 # Database Models
@@ -164,70 +181,6 @@ class ItineraryActivities(SQLModel, table=True):
 
 
 # API Request/Response Models
-class UserBase(SQLModel):
-    username: str
-    email: str
-    full_name: str
-
-
-class UserPublic(UserBase):
-    user_id: uuid.UUID
-    role: str = "user"
-    profile_picture: str | None = None
-    preferences: Dict[str, Any] | None = None
-    budget_preference: int | None = None
-    created_at: datetime
-
-
-class UsersPublic(SQLModel):
-    data: List[UserPublic]
-    count: int
-
-
-class UserLogin(SQLModel):
-    username: str
-    password: str
-
-
-class UserCreate(UserBase):
-    username : str
-    email : EmailStr
-    password: str
-    role: str = "user"
-    full_name : str
-
-class UserRegister(SQLModel):
-    username: str
-    email: EmailStr
-    password: str
-    full_name: str
-    role: str = "user"
-
-
-class UserUpdate(SQLModel):
-    username: str | None = None
-    email: str | None = None
-    full_name: str | None = None
-    profile_picture: str | None = None
-    role: str | None = None
-    preferences: Dict[str, Any] | None = None
-    budget_preference: int | None = None
-
-
-class UserUpdateMe(SQLModel):
-    username: str | None = None
-    email: str | None = None
-    full_name: str | None = None
-    profile_picture: str | None = None
-    preferences: Dict[str, Any] | None = None
-    budget_preference: int | None = None
-    # Users cannot update their own role
-
-
-class UserResponse(UserPublic):
-    pass
-
-
 class PlaceBase(SQLModel):
     name: str
     local_name: str | None = None
@@ -277,10 +230,14 @@ class PlacePhotoCreate(PlacePhotoBase):
     pass
 
 
-class PlacePhotoResponse(PlacePhotoBase):
+class PlacePhotoPublic(PlacePhotoBase):
     photo_id: int
     place_id: int
     created_at: datetime
+
+
+class PlacePhotoResponse(ResponseWrapper[PlacePhotoPublic]):
+    pass
 
 
 class RestaurantDetailBase(SQLModel):
@@ -295,15 +252,20 @@ class RestaurantDetailUpdate(SQLModel):
     meal_types: List[str] | None = None
 
 
-class RestaurantDetailResponse(RestaurantDetailBase):
+class RestaurantDetailPublic(RestaurantDetailBase):
     restaurant_detail_id: int
     place_id: int
     created_at: datetime
     updated_at: datetime
 
 
+class RestaurantDetailResponse(ResponseWrapper[RestaurantDetailPublic]):
+    pass
+
+
 class HotelDetailBase(SQLModel):
     pass
+
 
 class HotelDetailCreate(HotelDetailBase):
     pass
@@ -312,12 +274,16 @@ class HotelDetailCreate(HotelDetailBase):
 class HotelDetailUpdate(SQLModel):
     pass
 
-class HotelDetailResponse(HotelDetailBase):
+
+class HotelDetailPublic(HotelDetailBase):
     hotel_detail_id: int
     place_id: int
     created_at: datetime
     updated_at: datetime
 
+
+class HotelDetailResponse(ResponseWrapper[HotelDetailPublic]):
+    pass
 
 class AttractionDetailBase(SQLModel):
     subcategory: Dict[str, Any] | None = None
@@ -333,21 +299,34 @@ class AttractionDetailUpdate(SQLModel):
     subtype: Dict[str, Any] | None = None
 
 
-class AttractionDetailResponse(AttractionDetailBase):
+class AttractionDetailPublic(AttractionDetailBase):
     attraction_detail_id: int
     place_id: int
     created_at: datetime
     updated_at: datetime
 
 
-class PlaceResponse(PlaceBase):
+class AttractionDetailResponse(ResponseWrapper[AttractionDetailPublic]):
+    pass
+
+
+class PlacePublic(PlaceBase):
     place_id: int
     created_at: datetime
     updated_at: datetime
-    photos: List[PlacePhotoResponse] | None = None
-    restaurant_detail: RestaurantDetailResponse | None = None
-    hotel_detail: HotelDetailResponse | None = None
-    attraction_detail: AttractionDetailResponse | None = None
+    photos: List[PlacePhotoPublic] | None = None
+    restaurant_detail: RestaurantDetailPublic | None = None
+    hotel_detail: HotelDetailPublic | None = None
+    attraction_detail: AttractionDetailPublic | None = None
+
+
+class PlaceResponse(ResponseWrapper[PlacePublic]):
+    pass
+
+
+class PlacesResponse(SQLModel):
+    count: int
+    data: List[PlacePublic]
 
 
 class ItineraryBase(SQLModel):
@@ -406,39 +385,49 @@ class ItineraryActivityUpdate(SQLModel):
     start_time: time_type | None = None
 
 
-class ItineraryActivityResponse(ItineraryActivityBase):
+class ItineraryActivityPublic(ItineraryActivityBase):
     itinerary_activity_id: int
     day_id: int
     created_at: datetime
     updated_at: datetime
-    place: PlaceResponse
+    place: PlacePublic
 
 
-class ItineraryDayResponse(ItineraryDayBase):
+class ItineraryActivityResponse(ResponseWrapper[ItineraryActivityPublic]):
+    pass
+
+
+class ItineraryDayPublic(ItineraryDayBase):
     day_id: int
     itinerary_id: int
     created_at: datetime
     updated_at: datetime
-    hotel: PlaceResponse | None = None
-    activities: List[ItineraryActivityResponse] | None = None
+    hotel: PlacePublic | None = None
+    activities: List[ItineraryActivityPublic] | None = None
 
 
-class ItineraryResponse(ItineraryBase):
+class ItineraryDayResponse(ResponseWrapper[ItineraryDayPublic]):
+    pass
+
+
+class ItineraryPublic(ItineraryBase):
     itinerary_id: int
     user_id: uuid.UUID
     created_at: datetime
     updated_at: datetime
-    days: List[ItineraryDayResponse] | None = None
+    days: List[ItineraryDayPublic] | None = None
+
+
+class ItineraryResponse(ResponseWrapper[ItineraryPublic]):
+    pass
+
+
+class ItinerariesResponse(SQLModel):
+    count: int
+    data: List[ItineraryPublic]
 
 
 # Authentication models
-class Token(SQLModel):
-    access_token: str
-    token_type: str = "bearer"
-
-
-class TokenPayload(SQLModel):
-    sub: str | None = None
 
 
 class ChangePassword(SQLModel):
@@ -466,9 +455,8 @@ class OTPRequest(SQLModel):
     purpose: Literal["register", "recovery"]
 
 
-class OTPResponse(SQLModel):
-    msg: str
-    token: str
+class OTPResponse(ResponseWrapper[SQLModel]):
+    data: SQLModel = SQLModel(msg="", token="")
 
 
 class OTPVerify(SQLModel):
@@ -476,16 +464,25 @@ class OTPVerify(SQLModel):
     otp_code: str = PydanticField(..., min_length=6, max_length=6, pattern="^[0-9]+$")
 
 
-class OTPVerifyResponse(SQLModel):
+class OTPVerifyPublic(SQLModel):
     msg: str
     email: EmailStr
 
 
+class OTPVerifyResponse(ResponseWrapper[OTPVerifyPublic]):
+    pass
+
+
 class Message(SQLModel):
-    message: str
+    detail: str
+
+
 
 
 __all__ = [
+    # Generic Wrapper
+    "ResponseWrapper",
+    
     # Database Models
     "Users",
     "Places",
@@ -503,6 +500,7 @@ __all__ = [
     "UsersPublic",
     "UserLogin",
     "UserCreate",
+    "UserRegister",
     "UserUpdate",
     "UserUpdateMe",
     "UserResponse",
@@ -511,47 +509,56 @@ __all__ = [
     "PlaceBase",
     "PlaceCreate", 
     "PlaceUpdate",
+    "PlacePublic",
     "PlaceResponse",
     
     # Place Photos Models
     "PlacePhotoBase",
     "PlacePhotoCreate",
+    "PlacePhotoPublic",
     "PlacePhotoResponse",
     
     # Restaurant Details Models
     "RestaurantDetailBase",
     "RestaurantDetailCreate",
     "RestaurantDetailUpdate",
+    "RestaurantDetailPublic",
     "RestaurantDetailResponse",
     
     # Hotel Details Models
     "HotelDetailBase",
     "HotelDetailCreate",
     "HotelDetailUpdate",
+    "HotelDetailPublic",
     "HotelDetailResponse",
     
     # Attraction Details Models
     "AttractionDetailBase",
     "AttractionDetailCreate",
     "AttractionDetailUpdate",
+    "AttractionDetailPublic",
     "AttractionDetailResponse",
     
     # Itinerary Models
     "ItineraryBase",
     "ItineraryCreate",
     "ItineraryUpdate",
+    "ItineraryPublic",
     "ItineraryResponse",
+    "ItinerariesResponse",
     
     # Itinerary Day Models
     "ItineraryDayBase",
     "ItineraryDayCreate",
     "ItineraryDayUpdate",
+    "ItineraryDayPublic",
     "ItineraryDayResponse",
     
     # Itinerary Activity Models
     "ItineraryActivityBase",
     "ItineraryActivityCreate",
     "ItineraryActivityUpdate",
+    "ItineraryActivityPublic",
     "ItineraryActivityResponse",
     
     # Authentication Models
@@ -562,6 +569,7 @@ __all__ = [
     "OTPRequest",
     "OTPResponse",
     "OTPVerify",
+    "OTPVerifyPublic",
     "OTPVerifyResponse",
     "Message"
 ]

@@ -62,12 +62,13 @@ def create_verification_email(email_to: str, otp_code: str) -> EmailData:
     })
     return EmailData(subject=subject, html_content=html)
 
-def create_recovery_email(email_to: str, otp_code: str) -> EmailData:
+def create_recovery_email(email_to: str, otp_code: str, full_name: str) -> EmailData:
     subject = f"{settings.PROJECT_NAME} - Password Recovery Code"
     html = render_email_template("reset_password.html", {
         "project_name": settings.PROJECT_NAME,
         "email": email_to,
         "otp_code": otp_code,
         "valid_minutes": 5,
+        "full_name": full_name  # Thêm full_name vào context
     })
     return EmailData(subject=subject, html_content=html)

@@ -9,7 +9,8 @@ from app.core.security import ALGORITHM
 from app.core import security
 from app.core.config import settings
 from app.core.db import engine
-from app.models import TokenPayload, Users, Token
+from app.models import  Users
+from app.repository.response.login_response import TokenPayload, Token
 
 api_key_header = APIKeyHeader(name="Authorization", auto_error=False)
 

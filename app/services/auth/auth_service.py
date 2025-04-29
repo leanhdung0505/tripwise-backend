@@ -5,7 +5,8 @@ from sqlmodel import Session
 from app.crud.users.crud_user import crud_user
 from app.core.config import settings
 from app.core.security import create_access_token, get_password_hash, verify_password
-from app.models import Token, Message, ChangePassword, NewPassword
+from app.models import Message, ChangePassword, NewPassword
+from app.repository.response.login_response import Token
 
 class AuthService:
     @staticmethod
@@ -43,7 +44,7 @@ class AuthService:
         current_user.password = get_password_hash(data.new_password)
         session.add(current_user)
         session.commit()
-        return Message(message="Password changed successfully")
+        return Message(detail="Password changed successfully")
 
     @staticmethod
     def reset_password_by_email(
@@ -61,6 +62,6 @@ class AuthService:
         user.password = get_password_hash(body.new_password)
         session.add(user)
         session.commit()
-        return Message(message="Password reset successfully")
+        return Message(detail="Password reset successfully")
 
 auth_service = AuthService()

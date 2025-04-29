@@ -2,7 +2,9 @@ from fastapi import HTTPException, status
 from sqlmodel import Session, select, func
 from uuid import UUID
 from app.crud.users.crud_user import crud_user
-from app.models import Users, UserCreate, UserUpdate, UserUpdateMe, UsersPublic, Message
+from app.models import Users, Message
+from app.repository.response.user_response import UserResponse, UserUpdateMe
+from app.repository.request.user_request import UserUpdate, UserCreate
 
 class UserService:
     def create_user(self, session: Session, user_in: UserCreate) -> Users:
@@ -13,7 +15,7 @@ class UserService:
             )
         return crud_user.create(session=session, user_create=user_in)
 
-    def update_user(self, session: Session, current_user: Users, user_in: UserUpdateMe) -> Users:
+    def update_user(self, session: Session, current_user: Users, user_in: UserUpdate) -> UserUpdateMe:
         if user_in.email:
             existing_user = crud_user.get_by_email(session=session, email=user_in.email)
             if existing_user and existing_user.user_id != current_user.user_id:
@@ -33,7 +35,7 @@ class UserService:
         return crud_user.update(session=session, db_user=db_user, user_in=user_in)
 
     # Thêm các phương thức mới cho admin
-    def get_users(self, session: Session, skip: int = 0, limit: int = 100) -> UsersPublic:
+    def get_users(self, session: Session, skip: int = 0, limit: int = 100) -> UserResponse:
         """Get list of all non-admin users with pagination"""
         # Query chỉ lấy non-admin users
         statement = select(Users).where(Users.role == 'user')
@@ -48,7 +50,7 @@ class UserService:
             statement.offset(skip).limit(limit)
         ).all()
         
-        return UsersPublic(data=users, count=count)
+        return UserResponse(data=users)
 
     def get_user_by_id(self, session: Session, user_id: UUID) -> Users:
         """Get a specific user by ID"""
@@ -75,7 +77,7 @@ class UserService:
             )
         session.delete(user)
         session.commit()
-        return Message(message="User deleted successfully")
+        return Message(detail="User deleted successfully")
 
     def delete_user_me(self, session: Session, current_user: Users) -> Message:
         """Delete own user account"""
@@ -86,7 +88,7 @@ class UserService:
             )
         session.delete(current_user)
         session.commit()
-        return Message(message="User deleted successfully")
+        return Message(detail="User deleted successfully")
 
 user_service = UserService()
 

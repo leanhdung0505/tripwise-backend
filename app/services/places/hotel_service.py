@@ -1,9 +1,9 @@
 from fastapi import HTTPException, status
 from sqlmodel import Session
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from app.models import (
     HotelDetails, HotelDetailCreate, HotelDetailUpdate, 
-    HotelDetailResponse, Message
+    HotelDetailResponse, Message, PaginationMetadata
 )
 from app.crud.places.crud_hotel import crud_hotel_detail
 from app.services.places.place_service import place_service
@@ -30,8 +30,33 @@ class HotelService:
             )
         return hotel_detail
     
-    def get_hotel_details(self, session: Session, skip: int = 0, limit: int = 100) -> List[HotelDetails]:
-        return crud_hotel_detail.get_multi(session=session, skip=skip, limit=limit)
+    def get_hotel_details(
+        self, 
+        session: Session, 
+        page: int = 1, 
+        limit: int = 10
+    ) -> Tuple[List[HotelDetails], PaginationMetadata]:
+        # Calculate skip value based on page and limit
+        skip = (page - 1) * limit
+        
+        # Get total count
+        total_count = crud_hotel_detail.get_count(session=session)
+        
+        # Get attraction details for the current page
+        attraction_details = crud_hotel_detail.get_multi(session=session, skip=skip, limit=limit)
+        
+        # Create pagination metadata
+        has_prev = page > 1
+        has_next = (page * limit) < total_count
+        
+        pagination = PaginationMetadata(
+            page=page,
+            limit=limit,
+            has_prev=has_prev,
+            has_next=has_next
+        )
+        
+        return attraction_details, pagination
     
     def create_hotel_detail(self, session: Session, place_id: int, hotel_detail_in: HotelDetailCreate) -> HotelDetails:
         # Check if place exists and is a hotel
@@ -87,6 +112,6 @@ class HotelService:
             )
         
         crud_hotel_detail.delete_by_place_id(session=session, place_id=place_id)
-        return Message(message="Hotel detail deleted successfully")
+        return Message(detail="Hotel detail deleted successfully")
 
 hotel_service = HotelService()

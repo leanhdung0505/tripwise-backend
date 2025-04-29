@@ -1,8 +1,8 @@
 from fastapi import HTTPException, status
 from sqlmodel import Session
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from app.models import (
-    RestaurantDetails, RestaurantDetailCreate, RestaurantDetailUpdate, 
+    PaginationMetadata, RestaurantDetails, RestaurantDetailCreate, RestaurantDetailUpdate, 
     RestaurantDetailResponse, Message
 )
 from app.crud.places.crud_restaurant import crud_restaurant
@@ -30,8 +30,34 @@ class RestaurantService:
             )
         return restaurant_detail
     
-    def get_restaurant_details(self, session: Session, skip: int = 0, limit: int = 100) -> List[RestaurantDetails]:
-        return crud_restaurant.get_multi(session=session, skip=skip, limit=limit)
+    def get_restaurant_details(
+        self, 
+        session: Session, 
+        page: int = 1, 
+        limit: int = 10
+    ) -> Tuple[List[RestaurantDetails], PaginationMetadata]:
+        # Calculate skip value based on page and limit
+        skip = (page - 1) * limit
+        
+        # Get total count
+        total_count = crud_restaurant.get_count(session=session)
+        
+        # Get attraction details for the current page
+        attraction_details = crud_restaurant.get_multi(session=session, skip=skip, limit=limit)
+        
+        # Create pagination metadata
+        has_prev = page > 1
+        has_next = (page * limit) < total_count
+        
+        pagination = PaginationMetadata(
+            page=page,
+            limit=limit,
+            has_prev=has_prev,
+            has_next=has_next
+        )
+        
+        return attraction_details, pagination
+    
     
     def create_restaurant_detail(self, session: Session, place_id: int, restaurant_detail_in: RestaurantDetailCreate) -> RestaurantDetails:
         # Check if place exists and is a restaurant
@@ -87,6 +113,6 @@ class RestaurantService:
             )
         
         crud_restaurant.delete_by_place_id(session=session, place_id=place_id)
-        return Message(message="Restaurant detail deleted successfully")
+        return Message(detail="Restaurant detail deleted successfully")
 
 restaurant_service = RestaurantService()
