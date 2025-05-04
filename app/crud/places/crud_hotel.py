@@ -1,4 +1,5 @@
 from typing import Optional, List
+from sqlalchemy import func
 from sqlmodel import Session, select
 from app.models import HotelDetails, HotelDetailCreate, HotelDetailUpdate
 
@@ -40,7 +41,9 @@ class CRUDHotel:
         if db_obj:
             session.delete(db_obj)
             session.commit()
-
+    def get_count(self, session: Session) -> int:
+        result = session.exec(select(func.count()).select_from(HotelDetails))
+        return result.one()
 # Create and export an instance
 crud_hotel_detail = CRUDHotel()
 
