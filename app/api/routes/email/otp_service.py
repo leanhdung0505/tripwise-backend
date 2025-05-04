@@ -14,7 +14,7 @@ from app.services.email.otp_token_service import (
     verify_otp_token,
 )
 from app.api.deps import get_session
-from app.models import OTPRequest, OTPResponse, OTPResponseData
+from app.models import OTPRequest, OTPResponse, OTPResponseData, OTPVerify, OTPVerifyPublic, OTPVerifyResponse
 
 router = APIRouter(prefix="/otp", tags=["mailservice"])
 
@@ -89,30 +89,20 @@ def request_otp(
 
 @router.post("/verify", status_code=status.HTTP_200_OK)
 def verify_otp(
-    token: str = Query(
-        ..., 
-        description="Token received from /request endpoint"
-    ),
-    otp_code: str = Query(
-        ..., 
-        description="5-digit OTP code sent to email",
-        min_length=5,
-        max_length=5,
-        regex="^[0-9]+$"
-    )
+    verify_request: OTPVerify
 ):
     """
     Verify OTP code sent via email.
     No authentication required - verification is done using the token and OTP code.
     """
     try:
-        email = verify_otp_token(token, otp_code)
-        return { 
-            "data": {
-                "message": "OTP verified successfully",
-                 "email": email
-            },
-        }
+        email = verify_otp_token(verify_request.token, verify_request.otp_code)
+        return OTPVerifyResponse(
+            data=OTPVerifyPublic(
+                message="OTP verified successfully",
+                email=email
+            )
+        )
     except HTTPException as e:
         raise e
     except Exception as e:
