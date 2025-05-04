@@ -1,0 +1,118 @@
+<!doctype html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml"
+  xmlns:o="urn:schemas-microsoft-com:office:office">
+
+<head>
+  <title>Email Verification</title>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style type="text/css">
+    #outlook a {
+      padding: 0;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+    }
+
+    table,
+    td {
+      border-collapse: collapse;
+      mso-table-lspace: 0pt;
+      mso-table-rspace: 0pt;
+    }
+
+    img {
+      border: 0;
+      height: auto;
+      line-height: 100%;
+      outline: none;
+      text-decoration: none;
+      -ms-interpolation-mode: bicubic;
+    }
+
+    p {
+      display: block;
+      margin: 13px 0;
+    }
+
+    .ExternalClass * {
+      line-height: 100%;
+    }
+
+    @media only screen and (max-width:480px) {
+      @-ms-viewport {
+        width: 320px;
+      }
+
+      @viewport {
+        width: 320px;
+      }
+    }
+  </style>
+  <link href="https://fonts.googleapis.com/css?family=Ubuntu:300,400,500,700" rel="stylesheet" type="text/css">
+</head>
+
+<body style="background-color:#fafbfc;">
+  <div style="background-color:#fafbfc;">
+    <div style="background:#ffffff;background-color:#ffffff;margin:0px auto;max-width:600px;">
+      <table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation"
+        style="background:#ffffff;background-color:#ffffff;width:100%;">
+        <tbody>
+          <tr>
+            <td style="direction:ltr;padding:40px 20px;text-align:center;vertical-align:top;">
+              <!-- Logo -->
+              <div style="margin-bottom:30px;">
+                <img src="{{ logo_url }}" alt="{{ project_name }}" style="width:150px;max-width:100%;height:auto;">
+              </div>
+
+              <!-- Header -->
+              <div
+                style="font-family:Ubuntu,Arial,sans-serif;font-size:24px;font-weight:bold;line-height:1.2;text-align:center;color:#333333;margin-bottom:30px;">
+                Verify Your Email Address
+              </div>
+
+              <!-- Welcome Message -->
+              <div
+                style="font-family:Arial,sans-serif;font-size:16px;line-height:1.5;text-align:center;color:#555555;margin-bottom:30px;">
+                Welcome to {{ project_name }}! Please use the verification code below to complete your registration.
+              </div>
+
+              <!-- OTP Code -->
+              <div style="background-color:#f8f9fa;border-radius:8px;padding:30px;margin-bottom:30px;">
+                <div
+                  style="font-family:Ubuntu,Arial,sans-serif;font-size:32px;font-weight:bold;letter-spacing:8px;color:#009688;">
+                  {{ otp_code }}
+                </div>
+                <div style="font-family:Arial,sans-serif;font-size:14px;color:#888888;margin-top:10px;">
+                  This code will expire in 5 minutes
+                </div>
+              </div>
+
+              <!-- Account Info -->
+              <div
+                style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5;text-align:center;color:#555555;margin-bottom:30px;">
+                <div style="margin-bottom:5px;">Email: {{ email }}</div>
+              </div>
+
+              <!-- Footer -->
+              <div style="border-top:2px solid #eeeeee;padding-top:20px;">
+                <div
+                  style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5;text-align:center;color:#888888;">
+                  This is an automated message from {{ project_name }}.<br>
+                  If you didn't request this code, please ignore this email.
+                </div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</body>
+
+</html>
