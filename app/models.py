@@ -455,13 +455,18 @@ class OTPRequest(SQLModel):
     purpose: Literal["register", "recovery"]
 
 
-class OTPResponse(ResponseWrapper[SQLModel]):
-    data: SQLModel = SQLModel(msg="", token="")
+class OTPResponseData(SQLModel):
+    message: str
+    token: str
+
+
+class OTPResponse(ResponseWrapper[OTPResponseData]):
+    data: OTPResponseData
 
 
 class OTPVerify(SQLModel):
     token: str
-    otp_code: str = PydanticField(..., min_length=6, max_length=6, pattern="^[0-9]+$")
+    otp_code: str = PydanticField(..., min_length=5, max_length=5, pattern="^[0-9]+$")
 
 
 class OTPVerifyPublic(SQLModel):

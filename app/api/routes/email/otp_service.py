@@ -14,7 +14,7 @@ from app.services.email.otp_token_service import (
     verify_otp_token,
 )
 from app.api.deps import get_session
-from app.models import OTPRequest, OTPResponse
+from app.models import OTPRequest, OTPResponse, OTPResponseData
 
 router = APIRouter(prefix="/otp", tags=["mailservice"])
 
@@ -72,8 +72,10 @@ def request_otp(
         )
 
         return OTPResponse(
-            msg=f"OTP sent to {otp_request.email}",
-            token=token
+            data=OTPResponseData(
+                message=f"OTP sent to {otp_request.email}",
+                token=token
+            )
         )
 
     except HTTPException as e:
@@ -93,9 +95,9 @@ def verify_otp(
     ),
     otp_code: str = Query(
         ..., 
-        description="6-digit OTP code sent to email",
-        min_length=6,
-        max_length=6,
+        description="5-digit OTP code sent to email",
+        min_length=5,
+        max_length=5,
         regex="^[0-9]+$"
     )
 ):
@@ -105,9 +107,11 @@ def verify_otp(
     """
     try:
         email = verify_otp_token(token, otp_code)
-        return {
-            "msg": "Valid OTP",
-            "email": email
+        return { 
+            "data": {
+                "message": "OTP verified successfully",
+                 "email": email
+            },
         }
     except HTTPException as e:
         raise e
