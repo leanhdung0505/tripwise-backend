@@ -6,7 +6,7 @@ from fastapi import HTTPException
 
 from app.core.config import settings
 
-def generate_otp(length: int = 6) -> str:
+def generate_otp(length: int = 5) -> str:
     return ''.join(random.choices("0123456789", k=length))
 
 def create_otp_token(email: str, otp_code: str, expire_minutes: int = 5) -> str:
