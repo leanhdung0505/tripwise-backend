@@ -3,8 +3,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from app.api.deps import SessionDep, CurrentUser
 from app.core.security import get_password_hash, verify_password
+from app.crud.users.crud_user import crud_user
 from app.models import NewPassword, Message, ChangePassword
-from app import crud
 
 router = APIRouter(prefix="/password", tags=["auth"])
 
@@ -45,14 +45,14 @@ def reset_password(
     Reset password after email verification through OTP.
     No authentication required - verification was done through OTP.
     """
-    user = crud.get_user_by_email(session=session, email=body.email)
+    user = crud_user.get_by_email(session=session, email=body.email)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
         )
 
-    user.password_hash = get_password_hash(body.new_password)
+    user.password = get_password_hash(body.new_password)
     session.add(user)
     session.commit()
     return Message(detail="Password reset successfully")
