@@ -470,7 +470,7 @@ class OTPVerify(SQLModel):
 
 
 class OTPVerifyPublic(SQLModel):
-    msg: str
+    message: str
     email: EmailStr
 
 
