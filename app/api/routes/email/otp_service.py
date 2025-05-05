@@ -107,9 +107,11 @@ def verify_otp(
     """
     try:
         email = verify_otp_token(token, otp_code)
-        return {
-            "msg": "Valid OTP",
-            "email": email
+        return { 
+            "data": {
+                "message": "OTP verified successfully",
+                 "email": email
+            },
         }
     except HTTPException as e:
         raise e
