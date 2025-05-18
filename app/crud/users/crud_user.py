@@ -7,7 +7,11 @@ from app.repository.request.user_request import UserCreate, UserUpdate
 class CRUDUser:
     def get_by_email(self, session: Session, email: str) -> Optional[Users]:
         return session.exec(select(Users).where(Users.email == email)).first()
-
+    
+    def get_by_username(self, session: Session, username: str) -> Users | None:
+        statement = select(Users).where(Users.username == username)
+        return session.exec(statement).first()
+    
     def create(self, session: Session, user_create: UserCreate) -> Users:
         db_obj = Users(
             username=user_create.username,

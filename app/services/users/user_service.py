@@ -13,6 +13,12 @@ class UserService:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="The user with this email already exists in the system"
             )
+        # Check if username already exists
+        if crud_user.get_by_username(session=session, username=user_in.username):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="The user with this username already exists in the system"
+            )
         return crud_user.create(session=session, user_create=user_in)
 
     def update_user(self, session: Session, current_user: Users, user_in: UserUpdate) -> UserUpdateMe:
