@@ -16,7 +16,15 @@ class PlaceService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Place not found"
             )
-        return place
+        
+        # Fetch photos for this place
+        photos = crud_place.get_photos(session=session, place_id=place_id)
+        
+        # Create PlacePublic with photos included
+        place_data = place.dict()
+        place_data["photos"] = photos
+        
+        return PlacePublic(**place_data)
     
     def get_places(self, session: Session, page: int = 1, limit: int = 10) -> Dict[str, Any]:
         skip = (page - 1) * limit
@@ -29,6 +37,13 @@ class PlaceService:
         if has_next:
             places = places[:limit]  # Remove the extra item
         
+        # For each place, fetch and add photos
+        places_with_photos = []
+        for place in places:
+            place_data = place.dict()
+            place_data["photos"] = crud_place.get_photos(session=session, place_id=place.place_id)
+            places_with_photos.append(PlacePublic(**place_data))
+        
         pagination = PaginationMetadata(
             page=page,
             limit=limit,
@@ -37,7 +52,7 @@ class PlaceService:
         )
         
         return {
-            "data": places,
+            "data": places_with_photos,
             "pagination": pagination
         }
     
@@ -52,6 +67,13 @@ class PlaceService:
         if has_next:
             places = places[:limit]  # Remove the extra item
         
+        # For each place, fetch and add photos
+        places_with_photos = []
+        for place in places:
+            place_data = place.dict()
+            place_data["photos"] = crud_place.get_photos(session=session, place_id=place.place_id)
+            places_with_photos.append(PlacePublic(**place_data))
+        
         pagination = PaginationMetadata(
             page=page,
             limit=limit,
@@ -60,7 +82,7 @@ class PlaceService:
         )
         
         return {
-            "data": places,
+            "data": places_with_photos,
             "pagination": pagination
         }
     
@@ -75,6 +97,13 @@ class PlaceService:
         if has_next:
             places = places[:limit]  # Remove the extra item
         
+        # For each place, fetch and add photos
+        places_with_photos = []
+        for place in places:
+            place_data = place.dict()
+            place_data["photos"] = crud_place.get_photos(session=session, place_id=place.place_id)
+            places_with_photos.append(PlacePublic(**place_data))
+        
         pagination = PaginationMetadata(
             page=page,
             limit=limit,
@@ -83,7 +112,7 @@ class PlaceService:
         )
         
         return {
-            "data": places,
+            "data": places_with_photos,
             "pagination": pagination
         }
     
@@ -98,6 +127,13 @@ class PlaceService:
         if has_next:
             places = places[:limit]  # Remove the extra item
         
+        # For each place, fetch and add photos
+        places_with_photos = []
+        for place in places:
+            place_data = place.dict()
+            place_data["photos"] = crud_place.get_photos(session=session, place_id=place.place_id)
+            places_with_photos.append(PlacePublic(**place_data))
+        
         pagination = PaginationMetadata(
             page=page,
             limit=limit,
@@ -106,16 +142,31 @@ class PlaceService:
         )
         
         return {
-            "data": places,
+            "data": places_with_photos,
             "pagination": pagination
         }
     
     def create_place(self, session: Session, place_in: PlaceCreate) -> PlacePublic:
-        return crud_place.create(session=session, place_create=place_in)
+        place = crud_place.create(session=session, place_create=place_in)
+        
+        # Add empty photos list as it's a new place
+        place_data = place.dict()
+        place_data["photos"] = []
+        
+        return PlacePublic(**place_data)
     
     def update_place(self, session: Session, place_id: int, place_in: PlaceUpdate) -> PlacePublic:
         db_place = self.get_place(session=session, place_id=place_id)
-        return crud_place.update(session=session, db_place=db_place, place_in=place_in)
+        updated_place = crud_place.update(session=session, db_place=db_place, place_in=place_in)
+        
+        # Fetch photos for this place
+        photos = crud_place.get_photos(session=session, place_id=place_id)
+        
+        # Create PlacePublic with photos included
+        place_data = updated_place.dict()
+        place_data["photos"] = photos
+        
+        return PlacePublic(**place_data)
     
     def delete_place(self, session: Session, place_id: int) -> Message:
         place = crud_place.get_by_id(session=session, place_id=place_id)
