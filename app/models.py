@@ -65,6 +65,8 @@ class Places(SQLModel, table=True):
     image: str | None = Field(max_length=255, default=None)
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
+    number_review: int | None = Field(default=None)
+
 
     # Relationships
     photos: List["PlacePhotos"] = Relationship(back_populates="place")
@@ -198,6 +200,8 @@ class PlaceBase(SQLModel):
     website: str | None = None
     web_url: str | None = None
     image: str | None = None
+    number_review : int | None = None
+
 
 
 class PlaceCreate(PlaceBase):
