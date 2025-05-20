@@ -72,7 +72,7 @@ class Places(SQLModel, table=True):
     hotel_detail: Optional["HotelDetails"] | None = Relationship(back_populates="place")
     attraction_detail: Optional["AttractionDetails"] | None = Relationship(back_populates="place")
     itinerary_activities: List["ItineraryActivities"] = Relationship(back_populates="place")
-    hotel_stays: List["ItineraryDays"] = Relationship(back_populates="hotel")
+    itineraries: List["Itineraries"] = Relationship(back_populates="hotel")
 
 
 class PlacePhotos(SQLModel, table=True):
@@ -136,16 +136,19 @@ class Itineraries(SQLModel, table=True):
     description: str | None = Field(sa_column=Column(Text), default=None)
     start_date: date_type = Field(sa_column=Column(Date))
     end_date: date_type = Field(sa_column=Column(Date))
-    budget: int | None = Field(default=None)
+    budget: str | None = Field(default=None)
     destination_city: str = Field(max_length=100, default="Da Nang")
     is_favorite: bool = Field(default=False)
     is_completed: bool = Field(default=False)
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
+    hotel_id: int | None = Field(foreign_key="places.place_id", default=None)
+
 
     # Relationships
     user: Users = Relationship(back_populates="itineraries")
     days: List["ItineraryDays"] = Relationship(back_populates="itinerary")
+    hotel: Places | None = Relationship(back_populates="itineraries")
 
 
 class ItineraryDays(SQLModel, table=True):
@@ -155,13 +158,11 @@ class ItineraryDays(SQLModel, table=True):
     itinerary_id: int = Field(foreign_key="itineraries.itinerary_id")
     day_number: int = Field()
     date: date_type = Field(sa_column=Column(Date))
-    hotel_id: int | None = Field(foreign_key="places.place_id", default=None)
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
 
     # Relationships
     itinerary: Itineraries = Relationship(back_populates="days")
-    hotel: Places | None = Relationship(back_populates="hotel_stays")
     activities: List["ItineraryActivities"] = Relationship(back_populates="day")
 
 
@@ -334,10 +335,12 @@ class ItineraryBase(SQLModel):
     description: str | None = None
     start_date: date_type
     end_date: date_type
-    budget: int | None = None
+    budget: str | None = None
     destination_city: str = "Da Nang"
     is_favorite: bool = False
     is_completed: bool = False
+    hotel_id: int | None = None
+
 
 
 class ItineraryCreate(ItineraryBase):
@@ -345,20 +348,19 @@ class ItineraryCreate(ItineraryBase):
 
 
 class ItineraryUpdate(SQLModel):
-    title: str | None = None
-    description: str | None = None
-    start_date: date_type | None = None
-    end_date: date_type | None = None
-    budget: int | None = None
-    destination_city: str | None = None
-    is_favorite: bool | None = None
-    is_completed: bool | None = None
-
+    title: Optional[str] = None
+    description: Optional[str] = None
+    start_date: Optional[date_type] = None
+    end_date: Optional[date_type] = None
+    budget: Optional[str] = None
+    destination_city: Optional[str] = None
+    is_favorite: Optional[bool] = None
+    is_completed: Optional[bool] = None
+    hotel_id: Optional[int] = None 
 
 class ItineraryDayBase(SQLModel):
     day_number: int
     date: date_type
-    hotel_id: int | None = None
 
 
 class ItineraryDayCreate(ItineraryDayBase):
@@ -366,9 +368,8 @@ class ItineraryDayCreate(ItineraryDayBase):
 
 
 class ItineraryDayUpdate(SQLModel):
-    day_number: int | None = None
-    date: date_type | None = None
-    hotel_id: int | None = None
+    day_number: Optional[int] = None
+    date: Optional[date_type] = None
 
 
 class ItineraryActivityBase(SQLModel):
@@ -381,8 +382,8 @@ class ItineraryActivityCreate(ItineraryActivityBase):
 
 
 class ItineraryActivityUpdate(SQLModel):
-    place_id: int | None = None
-    start_time: time_type | None = None
+    place_id: Optional[int] = None
+    start_time: Optional[time_type] = None
 
 
 class ItineraryActivityPublic(ItineraryActivityBase):
@@ -402,7 +403,6 @@ class ItineraryDayPublic(ItineraryDayBase):
     itinerary_id: int
     created_at: datetime
     updated_at: datetime
-    hotel: PlacePublic | None = None
     activities: List[ItineraryActivityPublic] | None = None
 
 
@@ -415,6 +415,7 @@ class ItineraryPublic(ItineraryBase):
     user_id: uuid.UUID
     created_at: datetime
     updated_at: datetime
+    hotel: PlacePublic | None = None
     days: List[ItineraryDayPublic] | None = None
 
 
