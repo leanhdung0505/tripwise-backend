@@ -6,13 +6,62 @@ from app.models import (
     Message, Itineraries, ItineraryCreate, ItineraryUpdate, ItineraryPublic,
     ItineraryDays, ItineraryDayCreate, ItineraryDayUpdate, ItineraryDayPublic,
     ItineraryActivities, ItineraryActivityCreate, ItineraryActivityUpdate, ItineraryActivityPublic,
-    PaginationMetadata, PaginatedResponse
+    PaginationMetadata, PaginatedResponse, Places, PlacePublic,
+    PlacePhotos, RestaurantDetails, HotelDetails, AttractionDetails,
+    PlacePhotoPublic, RestaurantDetailPublic, HotelDetailPublic, AttractionDetailPublic
 )
 from app.crud.itineraries.crud_itinerary import crud_itinerary
 from app.services.places.place_service import place_service
 from datetime import date
 
 class ItineraryService:
+    def _get_place_with_details(self, session: Session, place_id: int) -> PlacePublic:
+        """Helper method to get place with all details"""
+        # Get the place
+        place = session.get(Places, place_id)
+        if not place:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Place with ID {place_id} not found"
+            )
+        
+        # Convert to dict to build PlacePublic
+        place_data = place.dict()
+        
+        # Get photos
+        photos = session.exec(
+            select(PlacePhotos).where(PlacePhotos.place_id == place_id)
+        ).all()
+        place_data["photos"] = [PlacePhotoPublic(**photo.dict()) for photo in photos] if photos else []
+        
+        # Get details based on place type
+        place_data["restaurant_detail"] = None
+        place_data["hotel_detail"] = None
+        place_data["attraction_detail"] = None
+        
+        if place.type.upper() == "RESTAURANT":
+            restaurant_detail = session.exec(
+                select(RestaurantDetails).where(RestaurantDetails.place_id == place_id)
+            ).first()
+            if restaurant_detail:
+                place_data["restaurant_detail"] = RestaurantDetailPublic(**restaurant_detail.dict())
+        
+        elif place.type.upper() == "HOTEL":
+            hotel_detail = session.exec(
+                select(HotelDetails).where(HotelDetails.place_id == place_id)
+            ).first()
+            if hotel_detail:
+                place_data["hotel_detail"] = HotelDetailPublic(**hotel_detail.dict())
+        
+        elif place.type.upper() == "ATTRACTION":
+            attraction_detail = session.exec(
+                select(AttractionDetails).where(AttractionDetails.place_id == place_id)
+            ).first()
+            if attraction_detail:
+                place_data["attraction_detail"] = AttractionDetailPublic(**attraction_detail.dict())
+        
+        return PlacePublic(**place_data)
+
     def get_itinerary(self, session: Session, itinerary_id: int) -> ItineraryPublic:
         itinerary = crud_itinerary.get_by_id(session=session, itinerary_id=itinerary_id)
         if not itinerary:
@@ -27,7 +76,6 @@ class ItineraryService:
 
         for day in days:
             day_data = day.dict()
-            # KHÔNG xử lý hotel ở đây nữa
 
             # Add activities for this day
             activities = crud_itinerary.get_activities(session=session, day_id=day.day_id)
@@ -35,7 +83,8 @@ class ItineraryService:
 
             for activity in activities:
                 activity_data = activity.dict()
-                place = place_service.get_place(session=session, place_id=activity.place_id)
+                # Use the new method to get place with all details
+                place = self._get_place_with_details(session=session, place_id=activity.place_id)
                 activity_data["place"] = place
                 activities_with_place.append(ItineraryActivityPublic(**activity_data))
 
@@ -46,10 +95,10 @@ class ItineraryService:
         itinerary_data = itinerary.dict()
         itinerary_data["days"] = days_with_data
 
-        # Lấy hotel nếu có
+        # Lấy hotel nếu có với đầy đủ thông tin chi tiết
         itinerary_data["hotel"] = None
         if itinerary.hotel_id:
-            itinerary_data["hotel"] = place_service.get_place(session=session, place_id=itinerary.hotel_id)
+            itinerary_data["hotel"] = self._get_place_with_details(session=session, place_id=itinerary.hotel_id)
 
         return ItineraryPublic(**itinerary_data)
     
@@ -71,9 +120,16 @@ class ItineraryService:
         
         itineraries_with_data = []
         for itinerary in itineraries:
-            # We just include the basic itinerary data without days to keep response size manageable
-            # Days can be fetched separately when needed
-            itineraries_with_data.append(ItineraryPublic(**itinerary.dict()))
+            # Include basic itinerary data with hotel details if available
+            itinerary_data = itinerary.dict()
+            itinerary_data["days"] = []  # Empty for list view
+            
+            # Add hotel details if present
+            itinerary_data["hotel"] = None
+            if itinerary.hotel_id:
+                itinerary_data["hotel"] = self._get_place_with_details(session=session, place_id=itinerary.hotel_id)
+            
+            itineraries_with_data.append(ItineraryPublic(**itinerary_data))
         
         pagination = PaginationMetadata(
             page=page,
@@ -95,11 +151,18 @@ class ItineraryService:
                 detail="Start date cannot be after end date"
             )
         
+        # Validate hotel exists if provided
+        if itinerary_in.hotel_id:
+            self._get_place_with_details(session=session, place_id=itinerary_in.hotel_id)
+        
         itinerary = crud_itinerary.create(session=session, itinerary_create=itinerary_in, user_id=str(user_id))
         
-        # Add empty days list as it's a new itinerary
+        # Add empty days list and hotel details as it's a new itinerary
         itinerary_data = itinerary.dict()
         itinerary_data["days"] = []
+        itinerary_data["hotel"] = None
+        if itinerary.hotel_id:
+            itinerary_data["hotel"] = self._get_place_with_details(session=session, place_id=itinerary.hotel_id)
         
         return ItineraryPublic(**itinerary_data)
     
@@ -123,6 +186,10 @@ class ItineraryService:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="End date cannot be before current start date"
             )
+        
+        # Validate hotel exists if provided
+        if itinerary_in.hotel_id:
+            self._get_place_with_details(session=session, place_id=itinerary_in.hotel_id)
         
         updated_itinerary = crud_itinerary.update(session=session, db_itinerary=itinerary, itinerary_in=itinerary_in)
         
@@ -175,30 +242,21 @@ class ItineraryService:
                     detail="Day date must be within itinerary date range"
                 )
         
-        # Verify hotel exists if provided
-        if day_in.hotel_id:
-            place_service.get_place(session=session, place_id=day_in.hotel_id)
-        
         updated_day = crud_itinerary.update_day(session=session, db_day=day, day_in=day_in)
         
-        # Fetch activities for this day
+        # Fetch activities for this day with full place details
         activities = crud_itinerary.get_activities(session=session, day_id=day_id)
         activities_with_place = []
         
         for activity in activities:
             activity_data = activity.dict()
-            place = place_service.get_place(session=session, place_id=activity.place_id)
+            place = self._get_place_with_details(session=session, place_id=activity.place_id)
             activity_data["place"] = place
             activities_with_place.append(ItineraryActivityPublic(**activity_data))
         
         # Create ItineraryDayPublic with activities included
         day_data = updated_day.dict()
         day_data["activities"] = activities_with_place
-        
-        # Add hotel data if present
-        if updated_day.hotel_id:
-            hotel = place_service.get_place(session=session, place_id=updated_day.hotel_id)
-            day_data["hotel"] = hotel
         
         return ItineraryDayPublic(**day_data)
     
@@ -229,8 +287,8 @@ class ItineraryService:
         # Get the itinerary and verify ownership
         self._get_user_itinerary(session, user_id, day.itinerary_id)
         
-        # Verify place exists
-        place = place_service.get_place(session=session, place_id=activity_in.place_id)
+        # Verify place exists and get full details
+        place = self._get_place_with_details(session=session, place_id=activity_in.place_id)
         
         activity = crud_itinerary.create_activity(session=session, day_id=day_id, activity_create=activity_in)
         
@@ -260,12 +318,12 @@ class ItineraryService:
         # Get the itinerary and verify ownership
         self._get_user_itinerary(session, user_id, day.itinerary_id)
         
-        # Verify place exists if provided
+        # Verify place exists if provided and get full details
         place = None
         if activity_in.place_id:
-            place = place_service.get_place(session=session, place_id=activity_in.place_id)
+            place = self._get_place_with_details(session=session, place_id=activity_in.place_id)
         else:
-            place = place_service.get_place(session=session, place_id=activity.place_id)
+            place = self._get_place_with_details(session=session, place_id=activity.place_id)
         
         updated_activity = crud_itinerary.update_activity(session=session, db_activity=activity, activity_in=activity_in)
         
