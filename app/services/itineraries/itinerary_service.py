@@ -271,19 +271,43 @@ class ItineraryService:
         return ItineraryDayPublic(**day_data)
     
     def delete_day(self, session: Session, user_id: UUID, day_id: int) -> Message:
-        # Get the day
+    # Get the day
         day = crud_itinerary.get_day_by_id(session=session, day_id=day_id)
         if not day:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Day not found"
             )
-        
+
         # Get the itinerary and verify ownership
-        self._get_user_itinerary(session, user_id, day.itinerary_id)
-        
+        itinerary = self._get_user_itinerary(session, user_id, day.itinerary_id)
+
+        # Lưu lại day_number và itinerary_id trước khi xóa
+        deleted_day_number = day.day_number
+        itinerary_id = day.itinerary_id
+
+        # Xóa day
         crud_itinerary.delete_day(session=session, day_id=day_id)
-        return Message(detail="Day deleted successfully")
+
+        # Lấy lại tất cả các ngày còn lại, sắp xếp theo day_number
+        days = crud_itinerary.get_days(session=session, itinerary_id=itinerary_id)
+
+        # Cập nhật lại day_number và date cho các ngày sau ngày vừa xóa
+        from datetime import timedelta
+
+        # Tìm ngày bắt đầu của itinerary
+        start_date = itinerary.start_date
+
+        for idx, d in enumerate(days):
+            new_day_number = idx + 1
+            new_date = start_date + timedelta(days=idx)
+            if d.day_number != new_day_number or d.date != new_date:
+                d.day_number = new_day_number
+                d.date = new_date
+                session.add(d)
+        session.commit()
+
+        return Message(detail="Day deleted and subsequent days updated successfully")
     
     def add_activity(self, session: Session, user_id: UUID, day_id: int, activity_in: ItineraryActivityCreate) -> ItineraryActivityPublic:
         # Get the day
