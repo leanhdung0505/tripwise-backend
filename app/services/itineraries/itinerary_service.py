@@ -271,7 +271,7 @@ class ItineraryService:
         return ItineraryDayPublic(**day_data)
     
     def delete_day(self, session: Session, user_id: UUID, day_id: int) -> Message:
-    # Get the day
+        # Get the day
         day = crud_itinerary.get_day_by_id(session=session, day_id=day_id)
         if not day:
             raise HTTPException(
@@ -305,9 +305,14 @@ class ItineraryService:
                 d.day_number = new_day_number
                 d.date = new_date
                 session.add(d)
+
+        # Trừ 1 ngày cho end_date
+        itinerary.end_date = itinerary.end_date - timedelta(days=1)
+        session.add(itinerary)
+
         session.commit()
 
-        return Message(detail="Day deleted and subsequent days updated successfully")
+        return Message(detail="Day deleted, subsequent days and end_date updated successfully")
     
     def add_activity(self, session: Session, user_id: UUID, day_id: int, activity_in: ItineraryActivityCreate) -> ItineraryActivityPublic:
         # Get the day
