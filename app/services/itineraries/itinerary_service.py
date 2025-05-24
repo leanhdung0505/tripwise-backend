@@ -338,14 +338,14 @@ class ItineraryService:
         return ItineraryActivityPublic(**activity_data)
     
     def update_activity(self, session: Session, user_id: UUID, activity_id: int, activity_in: ItineraryActivityUpdate) -> ItineraryActivityPublic:
-        # Get the activity
+    # Get the activity
         activity = crud_itinerary.get_activity_by_id(session=session, activity_id=activity_id)
         if not activity:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Activity not found"
             )
-        
+
         # Get the day
         day = crud_itinerary.get_day_by_id(session=session, day_id=activity.day_id)
         if not day:
@@ -353,23 +353,42 @@ class ItineraryService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Day not found"
             )
-        
+
         # Get the itinerary and verify ownership
         self._get_user_itinerary(session, user_id, day.itinerary_id)
-        
-        # Verify place exists if provided and get full details
-        place = None
+
+        # Nếu có cập nhật start_time, kiểm tra trùng trong ngày
+        if activity_in.start_time:
+            activities_in_day = crud_itinerary.get_activities(session=session, day_id=day.day_id)
+            for act in activities_in_day:
+                if act.itinerary_activity_id != activity_id and act.start_time == activity_in.start_time:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="start_time already exists in this day"
+                    )
+
+        # Cập nhật activity
+        updated_activity = crud_itinerary.update_activity(session=session, db_activity=activity, activity_in=activity_in)
+
+        # Sắp xếp lại các activity trong ngày theo start_time tăng dần (nếu cần)
+        activities_in_day = crud_itinerary.get_activities(session=session, day_id=day.day_id)
+        activities_sorted = sorted(activities_in_day, key=lambda x: x.start_time)
+
+        # Nếu bạn có trường thứ tự (order), hãy cập nhật lại ở đây (bỏ qua nếu không có)
+        # for idx, act in enumerate(activities_sorted):
+        #     act.order = idx + 1
+        #     session.add(act)
+        # session.commit()
+
+        # Lấy thông tin place cho activity vừa cập nhật
         if activity_in.place_id:
             place = self._get_place_with_details(session=session, place_id=activity_in.place_id)
         else:
             place = self._get_place_with_details(session=session, place_id=activity.place_id)
-        
-        updated_activity = crud_itinerary.update_activity(session=session, db_activity=activity, activity_in=activity_in)
-        
-        # Create ItineraryActivityPublic with place included
+
         activity_data = updated_activity.dict()
         activity_data["place"] = place
-        
+
         return ItineraryActivityPublic(**activity_data)
     
     def delete_activity(self, session: Session, user_id: UUID, activity_id: int) -> Message:
