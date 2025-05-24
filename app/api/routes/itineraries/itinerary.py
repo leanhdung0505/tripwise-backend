@@ -178,7 +178,7 @@ def add_itinerary_activity(
         activity_in=activity_in
     )
 
-@router.put("/activities/{activity_id}", response_model=ItineraryActivityPublic)
+@router.patch("/activities/{activity_id}", response_model=ItineraryActivityPublic)
 def update_itinerary_activity(
     *,
     session: SessionDep,
