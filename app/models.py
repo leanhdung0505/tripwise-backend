@@ -149,7 +149,7 @@ class Itineraries(SQLModel, table=True):
 
     # Relationships
     user: Users = Relationship(back_populates="itineraries")
-    days: List["ItineraryDays"] = Relationship(back_populates="itinerary")
+    days: List["ItineraryDays"] = Relationship(back_populates="itinerary", sa_relationship_kwargs={"cascade": "all, delete"})   
     hotel: Places | None = Relationship(back_populates="itineraries")
 
 
@@ -165,8 +165,10 @@ class ItineraryDays(SQLModel, table=True):
 
     # Relationships
     itinerary: Itineraries = Relationship(back_populates="days")
-    activities: List["ItineraryActivities"] = Relationship(back_populates="day")
-
+    activities: List["ItineraryActivities"] = Relationship(
+        back_populates="day",
+        sa_relationship_kwargs={"cascade": "all, delete"}
+    )
 
 class ItineraryActivities(SQLModel, table=True):
     __tablename__ = "itinerary_activities"
