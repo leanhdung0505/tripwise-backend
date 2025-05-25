@@ -216,22 +216,55 @@ class ItineraryService:
     def add_day(self, session: Session, user_id: UUID, itinerary_id: int, day_in: ItineraryDayCreate) -> ItineraryDayPublic:
         # Get the itinerary and verify ownership
         itinerary = self._get_user_itinerary(session, user_id, itinerary_id)
-        
-        # Validate day date is within itinerary date range
-        if day_in.date < itinerary.start_date or day_in.date > itinerary.end_date:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Day date must be within itinerary date range"
-            )
-        
-        day = crud_itinerary.create_day(session=session, itinerary_id=itinerary_id, day_create=day_in)
-        
-        # Add empty activities list as it's a new day
-        day_data = day.dict()
+
+        # Lấy tất cả các ngày hiện tại của itinerary, sắp xếp theo date
+        days = crud_itinerary.get_days(session=session, itinerary_id=itinerary_id)
+        days_sorted = sorted(days, key=lambda d: d.date)
+
+        # Kiểm tra ngày đã tồn tại chưa
+        for d in days_sorted:
+            if d.date == day_in.date:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="This date already exists in itinerary"
+                )
+
+        # Cập nhật end_date nếu ngày mới lớn hơn end_date hiện tại
+        if day_in.date > itinerary.end_date:
+            itinerary.end_date = day_in.date
+            session.add(itinerary)
+
+        # Xác định vị trí chèn và day_number mới
+        insert_idx = 0
+        for idx, d in enumerate(days_sorted):
+            if day_in.date < d.date:
+                insert_idx = idx
+                break
+        else:
+            insert_idx = len(days_sorted)  # Thêm vào cuối
+
+        new_day_number = insert_idx + 1
+
+        # Tăng day_number cho các ngày sau vị trí chèn
+        for i in range(insert_idx, len(days_sorted)):
+            days_sorted[i].day_number += 1
+            session.add(days_sorted[i])
+
+        # Tạo day mới với day_number đã tính
+        new_day = ItineraryDays(
+            itinerary_id=itinerary_id,
+            day_number=new_day_number,
+            date=day_in.date
+        )
+        session.add(new_day)
+        session.commit()
+        session.refresh(new_day)
+
+        # Trả về kết quả
+        day_data = new_day.dict()
         day_data["activities"] = []
-        
         return ItineraryDayPublic(**day_data)
-    
+
     def update_day(self, session: Session, user_id: UUID, day_id: int, day_in: ItineraryDayUpdate) -> ItineraryDayPublic:
         # Get the day
         day = crud_itinerary.get_day_by_id(session=session, day_id=day_id)
@@ -244,13 +277,10 @@ class ItineraryService:
         # Get the itinerary and verify ownership
         itinerary = self._get_user_itinerary(session, user_id, day.itinerary_id)
         
-        # Validate date is within itinerary range if provided
-        if day_in.date:
-            if day_in.date < itinerary.start_date or day_in.date > itinerary.end_date:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Day date must be within itinerary date range"
-                )
+        # Cập nhật end_date nếu ngày mới lớn hơn end_date hiện tại
+        if day_in.date and day_in.date > itinerary.end_date:
+            itinerary.end_date = day_in.date
+            session.add(itinerary)
         
         updated_day = crud_itinerary.update_day(session=session, db_day=day, day_in=day_in)
         
@@ -269,7 +299,7 @@ class ItineraryService:
         day_data["activities"] = activities_with_place
         
         return ItineraryDayPublic(**day_data)
-    
+        
     def delete_day(self, session: Session, user_id: UUID, day_id: int) -> Message:
         # Get the day
         day = crud_itinerary.get_day_by_id(session=session, day_id=day_id)
@@ -325,6 +355,16 @@ class ItineraryService:
         
         # Get the itinerary and verify ownership
         self._get_user_itinerary(session, user_id, day.itinerary_id)
+        
+        # Kiểm tra trùng start_time trong ngày
+        if activity_in.start_time:
+            activities_in_day = crud_itinerary.get_activities(session=session, day_id=day_id)
+            for act in activities_in_day:
+                if act.start_time == activity_in.start_time:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Time already exists in this day"
+                    )
         
         # Verify place exists and get full details
         place = self._get_place_with_details(session=session, place_id=activity_in.place_id)

@@ -365,7 +365,6 @@ class ItineraryUpdate(SQLModel):
     hotel_id: Optional[int] = None 
 
 class ItineraryDayBase(SQLModel):
-    day_number: int
     date: date_type
 
 
