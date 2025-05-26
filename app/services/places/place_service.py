@@ -141,6 +141,55 @@ class PlaceService:
             "data": places_with_details,
             "pagination": pagination
         }
+    def search_places_by_type_paginated(
+        self,
+        session: Session,
+        query: str,
+        type: str,
+        page: int = 1,
+        limit: int = 20
+    ) -> Dict[str, Any]:
+        skip = (page - 1) * limit
+
+        statement = (
+            select(Places)
+            .where(
+                (Places.type == type.upper()) &
+                (
+                    Places.name.ilike(f"%{query}%") |
+                    Places.address.ilike(f"%{query}%")
+                )
+            )
+            .offset(skip)
+            .limit(limit + 1)
+        )
+        results = session.exec(statement).all()
+        has_next = len(results) > limit
+        if has_next:
+            results = results[:limit]
+
+        count_stmt = (
+            select(Places)
+            .where(
+                (Places.type == type.upper()) &
+                (
+                    Places.name.ilike(f"%{query}%") |
+                    Places.address.ilike(f"%{query}%")
+                )
+            )
+        )
+        total_items = len(session.exec(count_stmt).all())
+        total_pages = (total_items + limit - 1) // limit if limit else 1
+
+        places = [self._get_place_with_details(session, place) for place in results]
+        pagination = PaginationMetadata(
+            page=page,
+            limit=limit,
+            total_pages=total_pages,
+            has_prev=page > 1,
+            has_next=has_next
+        )
+        return {"data": places, "pagination": pagination}
     
     def get_places_by_city_and_type(self, session: Session, city: str, type: str, page: int = 1, limit: int = 10) -> Dict[str, Any]:
         skip = (page - 1) * limit
