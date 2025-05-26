@@ -15,6 +15,7 @@ class ResponseWrapper(SQLModel, Generic[T]):
 class PaginationMetadata(SQLModel):
     page: int
     limit: int
+    total_pages: int
     has_prev: bool
     has_next: bool
 

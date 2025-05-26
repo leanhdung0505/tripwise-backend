@@ -105,13 +105,22 @@ class ItineraryService:
     def get_itineraries(self, session: Session, user_id: UUID = None, destination: str = None, page: int = 1, limit: int = 10) -> Dict[str, Any]:
         skip = (page - 1) * limit
         
-        # Get itineraries based on filters
+        # Get itineraries based on filters with one extra item
         if user_id:
             itineraries = crud_itinerary.get_by_user_id(session=session, user_id=str(user_id), skip=skip, limit=limit + 1)
+            # Get total count for this user
+            total_count = crud_itinerary.get_count_by_user_id(session=session, user_id=str(user_id))
         elif destination:
             itineraries = crud_itinerary.get_by_destination(session=session, destination=destination, skip=skip, limit=limit + 1)
+            # Get total count for this destination
+            total_count = crud_itinerary.get_count_by_destination(session=session, destination=destination)
         else:
             itineraries = crud_itinerary.get_multi(session=session, skip=skip, limit=limit + 1)
+            # Get total count for all itineraries
+            total_count = crud_itinerary.get_count(session=session)
+        
+        # Calculate total pages
+        total_pages = (total_count + limit - 1) // limit if limit else 1
         
         # Check if there are more items
         has_next = len(itineraries) > limit
@@ -135,7 +144,8 @@ class ItineraryService:
             page=page,
             limit=limit,
             has_prev=page > 1,
-            has_next=has_next
+            has_next=has_next,
+            total_pages=total_pages
         )
         
         return {

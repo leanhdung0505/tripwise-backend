@@ -42,8 +42,11 @@ class RestaurantService:
         # Get total count
         total_count = crud_restaurant.get_count(session=session)
         
-        # Get attraction details for the current page
-        attraction_details = crud_restaurant.get_multi(session=session, skip=skip, limit=limit)
+        # Calculate total pages
+        total_pages = (total_count + limit - 1) // limit if limit else 1
+        
+        # Get restaurant details for the current page
+        restaurant_details = crud_restaurant.get_multi(session=session, skip=skip, limit=limit)
         
         # Create pagination metadata
         has_prev = page > 1
@@ -53,10 +56,11 @@ class RestaurantService:
             page=page,
             limit=limit,
             has_prev=has_prev,
-            has_next=has_next
+            has_next=has_next,
+            total_pages=total_pages
         )
         
-        return attraction_details, pagination
+        return restaurant_details, pagination
     
     
     def create_restaurant_detail(self, session: Session, place_id: int, restaurant_detail_in: RestaurantDetailCreate) -> RestaurantDetails:

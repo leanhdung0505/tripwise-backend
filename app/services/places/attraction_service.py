@@ -42,6 +42,9 @@ class AttractionService:
         # Get total count
         total_count = crud_attraction.get_count(session=session)
         
+        # Calculate total pages
+        total_pages = (total_count + limit - 1) // limit if limit else 1
+        
         # Get attraction details for the current page
         attraction_details = crud_attraction.get_multi(session=session, skip=skip, limit=limit)
         
@@ -53,7 +56,8 @@ class AttractionService:
             page=page,
             limit=limit,
             has_prev=has_prev,
-            has_next=has_next
+            has_next=has_next,
+            total_pages=total_pages
         )
         
         return attraction_details, pagination
