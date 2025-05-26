@@ -34,6 +34,25 @@ def read_places(
     
     return result
 
+@router.get("/search", response_model=PaginatedResponse[PlacePublic])
+def search_places_by_type(
+    session: SessionDep,
+    query: str = Query(..., min_length=1, description="Search query (name or address)"),
+    type: str = Query(..., description="Place type (e.g. RESTAURANT, HOTEL, ATTRACTION)"),
+    page: int = Query(1, ge=1, description="Page number"),
+    limit: int = Query(10, ge=1, le=100, description="Number of items per page")
+):
+    """
+    Search for places by name or address and filter by type.
+    """
+    return place_service.search_places_by_type_paginated(
+        session=session,
+        query=query,
+        type=type,
+        page=page,
+        limit=limit
+    )
+    
 @router.get("/{place_id}", response_model=PlaceResponse)
 def read_place(
     *,
