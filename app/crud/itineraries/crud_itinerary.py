@@ -6,6 +6,7 @@ from app.models import (
     ItineraryActivities, ItineraryActivityCreate, ItineraryActivityUpdate,
     Places
 )
+from sqlalchemy import func
 from datetime import datetime
 
 class CRUDItinerary:
@@ -136,7 +137,19 @@ class CRUDItinerary:
         if db_obj:
             session.delete(db_obj)
             session.commit()
-
+    def get_count_by_user_id(self, session: Session, user_id: str) -> int:
+        result = session.exec(
+            select(func.count()).select_from(Itineraries).where(Itineraries.user_id == user_id)
+        ).one()
+        return result
+    def get_count_by_destination(self, session: Session, destination: str) -> int:
+        result = session.exec(
+            select(func.count()).select_from(Itineraries).where(Itineraries.destination_city == destination)
+        ).one()
+        return result
+    def get_count(self, session: Session) -> int:
+        result = session.exec(select(func.count()).select_from(Itineraries)).one()
+        return result
 
 # Create and export an instance
 crud_itinerary = CRUDItinerary()

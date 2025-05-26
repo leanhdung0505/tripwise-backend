@@ -60,27 +60,28 @@ class PlaceService:
     
     def get_places(self, session: Session, page: int = 1, limit: int = 10) -> Dict[str, Any]:
         skip = (page - 1) * limit
-        
+
         # Get one more item than the requested limit to check if there's a next page
         places = crud_place.get_multi(session=session, skip=skip, limit=limit + 1)
-        
-        # Check if there are more items
+        total_items = crud_place.get_count(session=session)  
+        total_pages = (total_items + limit - 1) // limit if limit else 1
+
         has_next = len(places) > limit
         if has_next:
-            places = places[:limit]  # Remove the extra item
-        
-        # For each place, fetch and add photos and details
+            places = places[:limit]
+
         places_with_details = []
         for place in places:
             places_with_details.append(self._get_place_with_details(session=session, place=place))
-        
+
         pagination = PaginationMetadata(
             page=page,
             limit=limit,
             has_prev=page > 1,
-            has_next=has_next
+            has_next=has_next,
+            total_pages=total_pages
         )
-        
+
         return {
             "data": places_with_details,
             "pagination": pagination
@@ -88,27 +89,26 @@ class PlaceService:
     
     def get_places_by_city(self, session: Session, city: str, page: int = 1, limit: int = 10) -> Dict[str, Any]:
         skip = (page - 1) * limit
-        
-        # Get one more item than the requested limit
         places = crud_place.get_by_city(session=session, city=city, skip=skip, limit=limit + 1)
-        
-        # Check if there are more items
+        total_items = crud_place.get_count_by_city(session=session, city=city)  
+        total_pages = (total_items + limit - 1) // limit if limit else 1
+
         has_next = len(places) > limit
         if has_next:
-            places = places[:limit]  # Remove the extra item
-        
-        # For each place, fetch and add photos and details
+            places = places[:limit]
+
         places_with_details = []
         for place in places:
             places_with_details.append(self._get_place_with_details(session=session, place=place))
-        
+
         pagination = PaginationMetadata(
             page=page,
             limit=limit,
             has_prev=page > 1,
-            has_next=has_next
+            has_next=has_next,
+            total_pages=total_pages
         )
-        
+
         return {
             "data": places_with_details,
             "pagination": pagination
@@ -116,27 +116,27 @@ class PlaceService:
     
     def get_places_by_type(self, session: Session, type: str, page: int = 1, limit: int = 10) -> Dict[str, Any]:
         skip = (page - 1) * limit
-        
-        # Get one more item than the requested limit
+
         places = crud_place.get_by_type(session=session, type=type, skip=skip, limit=limit + 1)
-        
-        # Check if there are more items
+        total_items = crud_place.get_count_by_type(session=session, type=type)  # Bạn cần hàm này trong crud
+        total_pages = (total_items + limit - 1) // limit if limit else 1
+
         has_next = len(places) > limit
         if has_next:
-            places = places[:limit]  # Remove the extra item
-        
-        # For each place, fetch and add photos and details
+            places = places[:limit]
+
         places_with_details = []
         for place in places:
             places_with_details.append(self._get_place_with_details(session=session, place=place))
-        
+
         pagination = PaginationMetadata(
             page=page,
             limit=limit,
             has_prev=page > 1,
-            has_next=has_next
+            has_next=has_next,
+            total_pages=total_pages
         )
-        
+
         return {
             "data": places_with_details,
             "pagination": pagination
@@ -144,27 +144,27 @@ class PlaceService:
     
     def get_places_by_city_and_type(self, session: Session, city: str, type: str, page: int = 1, limit: int = 10) -> Dict[str, Any]:
         skip = (page - 1) * limit
-        
-        # Get one more item than the requested limit
+
         places = crud_place.get_by_city_and_type(session=session, city=city, type=type, skip=skip, limit=limit + 1)
-        
-        # Check if there are more items
+        total_items = crud_place.get_count_by_city_and_type(session=session, city=city, type=type)  # Cần hàm này trong crud
+        total_pages = (total_items + limit - 1) // limit if limit else 1
+
         has_next = len(places) > limit
         if has_next:
-            places = places[:limit]  # Remove the extra item
-        
-        # For each place, fetch and add photos and details
+            places = places[:limit]
+
         places_with_details = []
         for place in places:
             places_with_details.append(self._get_place_with_details(session=session, place=place))
-        
+
         pagination = PaginationMetadata(
             page=page,
             limit=limit,
             has_prev=page > 1,
-            has_next=has_next
+            has_next=has_next,
+            total_pages=total_pages
         )
-        
+
         return {
             "data": places_with_details,
             "pagination": pagination
@@ -214,31 +214,29 @@ class PlaceService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Place not found"
             )
-        
+
         skip = (page - 1) * limit
-        
-        # Get all photos for now (we would ideally have a paginated version in crud_place)
+
         all_photos = crud_place.get_photos(session=session, place_id=place_id)
-        
-        # Do manual pagination since we have all photos
         total_photos = len(all_photos)
+        total_pages = (total_photos + limit - 1) // limit if limit else 1
+
         start_idx = skip
         end_idx = min(skip + limit + 1, total_photos)
-        
         photos = all_photos[start_idx:end_idx]
-        
-        # Check if there are more items
+
         has_next = end_idx < total_photos
         if len(photos) > limit:
-            photos = photos[:limit]  # Remove the extra item if any
-        
+            photos = photos[:limit]
+
         pagination = PaginationMetadata(
             page=page,
             limit=limit,
             has_prev=page > 1,
-            has_next=has_next
+            has_next=has_next,
+            total_pages=total_pages
         )
-        
+
         return {
             "data": photos,
             "pagination": pagination

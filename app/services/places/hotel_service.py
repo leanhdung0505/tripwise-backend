@@ -42,8 +42,11 @@ class HotelService:
         # Get total count
         total_count = crud_hotel_detail.get_count(session=session)
         
-        # Get attraction details for the current page
-        attraction_details = crud_hotel_detail.get_multi(session=session, skip=skip, limit=limit)
+        # Calculate total pages
+        total_pages = (total_count + limit - 1) // limit if limit else 1
+        
+        # Get hotel details for the current page
+        hotel_details = crud_hotel_detail.get_multi(session=session, skip=skip, limit=limit)
         
         # Create pagination metadata
         has_prev = page > 1
@@ -53,10 +56,11 @@ class HotelService:
             page=page,
             limit=limit,
             has_prev=has_prev,
-            has_next=has_next
+            has_next=has_next,
+            total_pages=total_pages
         )
         
-        return attraction_details, pagination
+        return hotel_details, pagination
     
     def create_hotel_detail(self, session: Session, place_id: int, hotel_detail_in: HotelDetailCreate) -> HotelDetails:
         # Check if place exists and is a hotel

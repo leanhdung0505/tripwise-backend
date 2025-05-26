@@ -1,5 +1,6 @@
 from typing import Optional, List
 from sqlmodel import Session, select
+from sqlalchemy import func
 from app.models import Places, PlaceCreate, PlaceUpdate, PlacePhotos, PlacePhotoCreate
 
 class CRUDPlace:
@@ -76,7 +77,20 @@ class CRUDPlace:
         if db_obj:
             session.delete(db_obj)
             session.commit()
-
+    def get_count(self, session: Session) -> int:
+            result = session.exec(select(func.count()).select_from(Places))
+            return result.one()
+    def get_count_by_city(self, session: Session, city: str) -> int:
+        result = session.exec(select(func.count()).select_from(Places).where(Places.city == city))
+        return result.one()
+    def get_count_by_type(self, session: Session, type: str) -> int:
+        result = session.exec(select(func.count()).select_from(Places).where(Places.type == type))
+        return result.one()
+    def get_count_by_city_and_type(self, session: Session, city: str, type: str) -> int:
+        result = session.exec(
+            select(func.count()).select_from(Places).where(Places.city == city, Places.type == type)
+        )
+        return result.one()
 # Create and export an instance
 crud_place = CRUDPlace()
 
