@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends
 from app.api.deps import SessionDep
 from app.models import GoogleLoginRequest
 from app.repository.response.login_response import LoginResponse
-from app.services.auth.google import google_auth_service
+from app.services.auth.google.google_auth_service import google_auth_service
 
 router = APIRouter(prefix="/google", tags=["google-auth"])
 
