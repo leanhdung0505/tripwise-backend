@@ -491,16 +491,16 @@ class Message(SQLModel):
 
 class GoogleLoginRequest(BaseModel):
     token: str  # Google ID token từ frontend
-    
+
 class GoogleUserInfo(BaseModel):
     id: str
     email: str
     verified_email: bool
     name: str
-    given_name: str
-    family_name: str
-    picture: str
-    locale: str
+    given_name: Optional[str] = None
+    family_name: Optional[str] = None
+    picture: Optional[str] = None
+    locale: Optional[str] = None  # <-- sửa thành Optional
 
 
 __all__ = [

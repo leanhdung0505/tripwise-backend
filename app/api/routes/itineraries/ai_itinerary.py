@@ -45,11 +45,11 @@ def create_itinerary_from_ai(
     
     # Create base itinerary
     itinerary_data = ItineraryCreate(
-        title=ai_data.get("tile", "AI Generated Itinerary"),  # Handle typo in input (tile → title)
+        title=ai_data.get("title", "AI Generated Itinerary"),  
         description=ai_data.get("description", "Generated from AI planning"),
         start_date=start_date,
         end_date=end_date,
-        budget=ai_data.get("budget", "0"),
+        budget=ai_data.get("budget_category", "0"),
         destination_city=ai_data.get("destination_city", "Unknown"),
         is_favorite=False,
         is_completed=False,
