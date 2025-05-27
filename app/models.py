@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, date as date_type, time as time_type
 from typing import List, Dict, Any, Literal, Optional, TypeVar, Generic
-from pydantic import EmailStr, Field as PydanticField
+from pydantic import EmailStr, Field as PydanticField, BaseModel
 from sqlmodel import Field, Relationship, SQLModel
 from sqlalchemy import Column, UniqueConstraint, Text, Time, Date
 from sqlalchemy.dialects.postgresql import JSONB, UUID, ARRAY
@@ -489,7 +489,18 @@ class OTPVerifyResponse(ResponseWrapper[OTPVerifyPublic]):
 class Message(SQLModel):
     detail: str
 
-
+class GoogleLoginRequest(BaseModel):
+    token: str  # Google ID token từ frontend
+    
+class GoogleUserInfo(BaseModel):
+    id: str
+    email: str
+    verified_email: bool
+    name: str
+    given_name: str
+    family_name: str
+    picture: str
+    locale: str
 
 
 __all__ = [
