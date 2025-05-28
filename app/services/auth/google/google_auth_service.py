@@ -64,6 +64,7 @@ class GoogleAuthService:
                 username=google_user.email.split('@')[0],  # Use email prefix as username
                 email=google_user.email,
                 full_name=google_user.name,
+                profile_picture=google_user.picture,
                 password="google_oauth_user",  # Placeholder password for OAuth users
                 role="user"  # Default role
             )
