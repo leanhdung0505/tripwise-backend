@@ -10,7 +10,9 @@ from app.models import (
     ItineraryShareResponse,
     ItinerarySharesResponse,
     UserPublicMinimal,
-    Itineraries
+    Itineraries,
+    ItineraryPublic,
+    PaginationMetadata
 )
 from app.services.itineraries.itinerary_share_service import itinerary_share_service
 from app.services.users.user_service import user_service
@@ -227,8 +229,8 @@ def get_itinerary_shares(
         page=page, 
         limit=limit
     )
-@router.get("/user/{user_id}/shares", response_model=Dict[str, Any])
-def get_user_shared_itineraries(
+@router.get("/user/{user_id}/shared-itineraries", response_model=Dict[str, list[ItineraryPublic]])
+def get_shared_itineraries_for_user(
     *,
     session: SessionDep,
     current_user: CurrentUser,
@@ -246,11 +248,12 @@ def get_user_shared_itineraries(
             status_code=400,
             detail="Invalid UUID format for user_id"
         )
-    
-    return itinerary_share_service.get_shares_by_user(
-        session=session, 
-        shared_with_user_id=user_uuid, 
-        page=page, 
+
+    result = itinerary_share_service.get_shared_itineraries_for_user(
+        session=session,
+        shared_with_user_id=user_uuid,
+        page=page,
         limit=limit
     )
+    return result
 

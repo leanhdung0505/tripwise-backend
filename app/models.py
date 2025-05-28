@@ -436,6 +436,13 @@ class ItineraryDayResponse(ResponseWrapper[ItineraryDayPublic]):
     pass
 
 
+class UserPublicMinimal(SQLModel):
+    user_id: uuid.UUID
+    username: str
+    full_name: str
+    email: str
+    profile_picture: str | None = None
+    
 class ItineraryPublic(ItineraryBase):
     itinerary_id: int
     user_id: uuid.UUID
@@ -443,6 +450,8 @@ class ItineraryPublic(ItineraryBase):
     updated_at: datetime
     hotel: PlacePublic | None = None
     days: List[ItineraryDayPublic] | None = None
+    shared_users: List[UserPublicMinimal] | None = None  
+    
 
 
 class ItineraryResponse(ResponseWrapper[ItineraryPublic]):
@@ -503,8 +512,6 @@ class ItinerarySharesResponse(PaginatedResponse[ItinerarySharePublic]):
 
 
 # Authentication models
-
-
 class ChangePassword(SQLModel):
     old_password: str
     new_password: str = PydanticField(
