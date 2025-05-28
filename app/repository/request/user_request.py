@@ -10,6 +10,7 @@ class UserCreate(SQLModel):
     email: EmailStr
     password: str
     full_name: str
+    profile_picture: Optional[str] = None
     role: Optional[str] = "user"
 
 class UserUpdate(SQLModel):

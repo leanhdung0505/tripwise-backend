@@ -2,7 +2,7 @@ from fastapi import HTTPException, status
 from sqlmodel import Session, select, func
 from uuid import UUID
 from app.crud.users.crud_user import crud_user
-from app.models import Users, Message
+from app.models import Users, Message, UserPublicMinimal
 from app.repository.response.user_response import UserResponse, UserUpdateMe
 from app.repository.request.user_request import UserUpdate, UserCreate
 
@@ -95,6 +95,27 @@ class UserService:
         session.delete(current_user)
         session.commit()
         return Message(detail="User deleted successfully")
+
+    def search_users_exclude_ids(self, session: Session, query: str, exclude_ids: list, limit: int = 20) -> list[UserPublicMinimal]:
+        statement = (
+            select(Users)
+            .where(
+                (Users.username.ilike(f"%{query}%") | Users.email.ilike(f"%{query}%")) &
+                (Users.user_id.notin_(exclude_ids))
+            )
+            .limit(limit)
+        )
+        users = session.exec(statement).all()
+        return [
+            UserPublicMinimal(
+                user_id=user.user_id,
+                username=user.username,
+                full_name=user.full_name,
+                email=user.email,
+                profile_picture=user.profile_picture
+            )
+            for user in users
+        ]
 
 user_service = UserService()
 
