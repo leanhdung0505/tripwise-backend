@@ -325,10 +325,19 @@ class ItineraryShareService:
                 ).all()
                 shared_users = []
                 for s in share_objs:
-                    user = session.get(Users, s.shared_with_user_id)
-                    if user:
-                        shared_users.append(UserPublicMinimal.model_validate(user))
+                    user_obj = session.get(Users, s.shared_with_user_id)
+                    if user_obj:
+                        shared_user_with_permission = UserPublicMinimal(
+                            user_id=user_obj.user_id,
+                            username=user_obj.username,
+                            full_name=user_obj.full_name,
+                            email=user_obj.email,
+                            profile_picture=user_obj.profile_picture,
+                            permissions=s.permission 
+                        )
+                    shared_users.append(shared_user_with_permission)
                 itinerary_data["shared_users"] = shared_users
+                
                 # Lấy thông tin hotel nếu có
                 if itinerary.hotel_id:
                     hotel_place = session.get(Places, itinerary.hotel_id)
@@ -337,11 +346,18 @@ class ItineraryShareService:
                     else:
                         itinerary_data["hotel"] = None
                 else:
-                    itinerary_data["hotel"] = None
+                    itinerary_data["hotel"] = None        
                 # Lấy thông tin chủ sở hữu itinerary
                 owner = session.get(Users, itinerary.user_id)
                 if owner:
-                    itinerary_data["owner"] = UserPublicMinimal.model_validate(owner)
+                    itinerary_data["owner"] = UserPublicMinimal(
+                        user_id=owner.user_id,
+                        username=owner.username,
+                        full_name=owner.full_name,
+                        email=owner.email,
+                        profile_picture=owner.profile_picture,
+                        permissions="owner"  
+                    )
                 else:
                     itinerary_data["owner"] = None
             
