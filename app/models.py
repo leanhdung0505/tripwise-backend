@@ -43,7 +43,10 @@ class Users(SQLModel, table=True):
 
     # Relationships
     itineraries: List["Itineraries"] = Relationship(back_populates="user")
-
+    shared_itineraries: List["ItineraryShares"] = Relationship(
+        back_populates="shared_with_user",
+        sa_relationship_kwargs={"cascade": "all, delete"}
+    )
 
 class Places(SQLModel, table=True):
     __tablename__ = "places"
@@ -152,7 +155,10 @@ class Itineraries(SQLModel, table=True):
     user: Users = Relationship(back_populates="itineraries")
     days: List["ItineraryDays"] = Relationship(back_populates="itinerary", sa_relationship_kwargs={"cascade": "all, delete"})   
     hotel: Places | None = Relationship(back_populates="itineraries")
-
+    shares: List["ItineraryShares"] = Relationship(
+        back_populates="itinerary", 
+        sa_relationship_kwargs={"cascade": "all, delete"}
+    )
 
 class ItineraryDays(SQLModel, table=True):
     __tablename__ = "itinerary_days"
@@ -185,7 +191,20 @@ class ItineraryActivities(SQLModel, table=True):
     day: ItineraryDays = Relationship(back_populates="activities")
     place: Places = Relationship(back_populates="itinerary_activities")
 
+class ItineraryShares(SQLModel, table=True):
+    __tablename__ = "itinerary_shares"
 
+    share_id: int = Field(default=None, primary_key=True)
+    itinerary_id: int = Field(foreign_key="itineraries.itinerary_id")
+    shared_with_user_id: uuid.UUID = Field(foreign_key="users.user_id")
+    permission: str = Field(max_length=10, default="view")  # view, edit
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+
+    # Relationships
+    itinerary: Itineraries = Relationship(back_populates="shares")
+    shared_with_user: Users = Relationship(back_populates="shared_itineraries")
+    
 # API Request/Response Models
 class PlaceBase(SQLModel):
     name: str
@@ -435,6 +454,54 @@ class ItinerariesResponse(SQLModel):
     data: List[ItineraryPublic]
 
 
+# Itinerary Share Models
+class ItineraryShareBase(SQLModel):
+    itinerary_id: int
+    shared_with_user_id: uuid.UUID
+    permission: str = Field(default="view", description="Permission level: view or edit")
+
+
+class ItineraryShareCreate(ItineraryShareBase):
+    pass
+
+
+class ItineraryShareUpdate(SQLModel):
+    permission: Optional[str] = Field(None, description="Permission level: view or edit")
+
+
+class UserPublicMinimal(SQLModel):
+    user_id: uuid.UUID
+    username: str
+    full_name: str
+    email: str
+    profile_picture: str | None = None
+
+
+class ItineraryPublicMinimal(SQLModel):
+    itinerary_id: int
+    title: str
+    description: str | None = None
+    start_date: date_type
+    end_date: date_type
+    destination_city: str
+
+
+class ItinerarySharePublic(ItineraryShareBase):
+    share_id: int
+    created_at: datetime
+    updated_at: datetime
+    shared_with_user: UserPublicMinimal | None = None
+    itinerary: ItineraryPublicMinimal | None = None
+
+
+class ItineraryShareResponse(ResponseWrapper[ItinerarySharePublic]):
+    pass
+
+
+class ItinerarySharesResponse(PaginatedResponse[ItinerarySharePublic]):
+    pass
+
+
 # Authentication models
 
 
@@ -506,6 +573,8 @@ class GoogleUserInfo(BaseModel):
 __all__ = [
     # Generic Wrapper
     "ResponseWrapper",
+    "PaginatedResponse",
+    "PaginationMetadata",
     
     # Database Models
     "Users",
@@ -517,6 +586,7 @@ __all__ = [
     "Itineraries",
     "ItineraryDays",
     "ItineraryActivities",
+    "ItineraryShares",
     
     # User Models
     "UserBase",
@@ -528,6 +598,7 @@ __all__ = [
     "UserUpdate",
     "UserUpdateMe",
     "UserResponse",
+    "UserPublicMinimal",
     
     # Place Models
     "PlaceBase",
@@ -568,6 +639,7 @@ __all__ = [
     "ItineraryCreate",
     "ItineraryUpdate",
     "ItineraryPublic",
+    "ItineraryPublicMinimal",
     "ItineraryResponse",
     "ItinerariesResponse",
     
@@ -585,6 +657,14 @@ __all__ = [
     "ItineraryActivityPublic",
     "ItineraryActivityResponse",
     
+    # Itinerary Share Models
+    "ItineraryShareBase",
+    "ItineraryShareCreate",
+    "ItineraryShareUpdate",
+    "ItinerarySharePublic",
+    "ItineraryShareResponse",
+    "ItinerarySharesResponse",
+    
     # Authentication Models
     "Token",
     "TokenPayload",
@@ -595,5 +675,7 @@ __all__ = [
     "OTPVerify",
     "OTPVerifyPublic",
     "OTPVerifyResponse",
-    "Message"
+    "Message",
+    "GoogleLoginRequest",
+    "GoogleUserInfo"
 ]
