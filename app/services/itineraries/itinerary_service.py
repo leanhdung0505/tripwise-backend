@@ -8,7 +8,8 @@ from app.models import (
     ItineraryActivities, ItineraryActivityCreate, ItineraryActivityUpdate, ItineraryActivityPublic,
     PaginationMetadata, PaginatedResponse, Places, PlacePublic,
     PlacePhotos, RestaurantDetails, HotelDetails, AttractionDetails,
-    PlacePhotoPublic, RestaurantDetailPublic, HotelDetailPublic, AttractionDetailPublic
+    PlacePhotoPublic, RestaurantDetailPublic, HotelDetailPublic, AttractionDetailPublic,UserPublicMinimal,
+    ItineraryShares, Users
 )
 from app.crud.itineraries.crud_itinerary import crud_itinerary
 from app.services.places.place_service import place_service
@@ -73,73 +74,75 @@ class ItineraryService:
         # Fetch days for this itinerary
         days = crud_itinerary.get_days(session=session, itinerary_id=itinerary_id)
         days_with_data = []
-
         for day in days:
             day_data = day.dict()
-
-            # Add activities for this day
             activities = crud_itinerary.get_activities(session=session, day_id=day.day_id)
             activities_with_place = []
-
             for activity in activities:
                 activity_data = activity.dict()
-                # Use the new method to get place with all details
-                place = self._get_place_with_details(session=session, place_id=activity.place_id)
+                place = self._get_place_with_details(session, activity.place_id)
                 activity_data["place"] = place
                 activities_with_place.append(ItineraryActivityPublic(**activity_data))
-
             day_data["activities"] = activities_with_place
             days_with_data.append(ItineraryDayPublic(**day_data))
 
-        # Create ItineraryPublic with days included
         itinerary_data = itinerary.dict()
         itinerary_data["days"] = days_with_data
-
-        # Lấy hotel nếu có với đầy đủ thông tin chi tiết
         itinerary_data["hotel"] = None
         if itinerary.hotel_id:
-            itinerary_data["hotel"] = self._get_place_with_details(session=session, place_id=itinerary.hotel_id)
+            itinerary_data["hotel"] = self._get_place_with_details(session, itinerary.hotel_id)
+
+        # Lấy danh sách user được share
+        shares = session.exec(
+            select(ItineraryShares).where(ItineraryShares.itinerary_id == itinerary_id)
+        ).all()
+        shared_users = []
+        for share in shares:
+            user = session.get(Users, share.shared_with_user_id)
+            if user:
+                shared_users.append(UserPublicMinimal.model_validate(user))
+        itinerary_data["shared_users"] = shared_users
 
         return ItineraryPublic(**itinerary_data)
     
     def get_itineraries(self, session: Session, user_id: UUID = None, destination: str = None, page: int = 1, limit: int = 10) -> Dict[str, Any]:
         skip = (page - 1) * limit
-        
-        # Get itineraries based on filters with one extra item
         if user_id:
             itineraries = crud_itinerary.get_by_user_id(session=session, user_id=str(user_id), skip=skip, limit=limit + 1)
-            # Get total count for this user
             total_count = crud_itinerary.get_count_by_user_id(session=session, user_id=str(user_id))
         elif destination:
             itineraries = crud_itinerary.get_by_destination(session=session, destination=destination, skip=skip, limit=limit + 1)
-            # Get total count for this destination
             total_count = crud_itinerary.get_count_by_destination(session=session, destination=destination)
         else:
             itineraries = crud_itinerary.get_multi(session=session, skip=skip, limit=limit + 1)
-            # Get total count for all itineraries
             total_count = crud_itinerary.get_count(session=session)
-        
-        # Calculate total pages
+
         total_pages = (total_count + limit - 1) // limit if limit else 1
-        
-        # Check if there are more items
         has_next = len(itineraries) > limit
         if has_next:
-            itineraries = itineraries[:limit]  # Remove the extra item
-        
+            itineraries = itineraries[:limit]
+
         itineraries_with_data = []
         for itinerary in itineraries:
-            # Include basic itinerary data with hotel details if available
             itinerary_data = itinerary.dict()
-            itinerary_data["days"] = []  # Empty for list view
-            
-            # Add hotel details if present
+            itinerary_data["days"] = []
             itinerary_data["hotel"] = None
             if itinerary.hotel_id:
-                itinerary_data["hotel"] = self._get_place_with_details(session=session, place_id=itinerary.hotel_id)
-            
+                itinerary_data["hotel"] = self._get_place_with_details(session, itinerary.hotel_id)
+
+            # Lấy danh sách user được share
+            shares = session.exec(
+                select(ItineraryShares).where(ItineraryShares.itinerary_id == itinerary.itinerary_id)
+            ).all()
+            shared_users = []
+            for share in shares:
+                user = session.get(Users, share.shared_with_user_id)
+                if user:
+                    shared_users.append(UserPublicMinimal.model_validate(user))
+            itinerary_data["shared_users"] = shared_users
+
             itineraries_with_data.append(ItineraryPublic(**itinerary_data))
-        
+
         pagination = PaginationMetadata(
             page=page,
             limit=limit,
@@ -147,7 +150,7 @@ class ItineraryService:
             has_next=has_next,
             total_pages=total_pages
         )
-        
+
         return {
             "data": itineraries_with_data,
             "pagination": pagination

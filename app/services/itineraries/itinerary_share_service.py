@@ -4,7 +4,7 @@ from typing import List, Optional, Dict, Any
 import uuid
 from app.models import (
     Message, ItineraryShares, Users, Itineraries,
-    PaginationMetadata,ItinerarySharePublic
+    PaginationMetadata, ItinerarySharePublic, ItineraryPublic
 )
 from app.crud.itineraries.crud_itinerary_share import crud_itinerary_share
 
@@ -288,5 +288,49 @@ class ItineraryShareService:
             shared_with_user_id=shared_with_user_id
         )
         return Message(detail="Itinerary share deleted successfully")
+    
+    def get_shared_itineraries_for_user(
+        self, session: Session, shared_with_user_id: uuid.UUID, page: int = 1, limit: int = 10
+    ) -> Dict[str, Any]:
+        # Check if user exists
+        user = session.get(Users, shared_with_user_id)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+
+        skip = (page - 1) * limit
+        shares = crud_itinerary_share.get_by_shared_user_id(
+            session=session, shared_with_user_id=shared_with_user_id, skip=skip, limit=limit + 1
+        )
+        total_items = crud_itinerary_share.get_count_by_shared_user_id(
+            session=session, shared_with_user_id=shared_with_user_id
+        )
+        total_pages = (total_items + limit - 1) // limit if limit else 1
+
+        has_next = len(shares) > limit
+        if has_next:
+            shares = shares[:limit]
+
+        # Lấy danh sách itinerary từ các share
+        itineraries = []
+        for share in shares:
+            itinerary = session.get(Itineraries, share.itinerary_id)
+            if itinerary:
+                itineraries.append(ItineraryPublic.model_validate(itinerary))
+
+        pagination = PaginationMetadata(
+            page=page,
+            limit=limit,
+            has_prev=page > 1,
+            has_next=has_next,
+            total_pages=total_pages
+        )
+
+        return {
+            "data": itineraries,
+            "pagination": pagination
+        }
 
 itinerary_share_service = ItineraryShareService()
