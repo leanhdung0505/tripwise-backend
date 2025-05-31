@@ -4,7 +4,7 @@ from typing import List, Optional, Dict, Any
 import uuid
 from app.models import (
     Message, ItineraryShares, Users, Itineraries,
-    PaginationMetadata, ItinerarySharePublic, ItineraryPublic,Places
+    PaginationMetadata, ItinerarySharePublic, ItineraryPublic,Places,UserPublicMinimal
 )
 from app.services.places.place_service import place_service
 from app.crud.itineraries.crud_itinerary_share import crud_itinerary_share
@@ -314,14 +314,21 @@ class ItineraryShareService:
         if has_next:
             shares = shares[:limit]
 
-        # Lấy danh sách itinerary từ các share
         itineraries = []
         for share in shares:
             itinerary = session.get(Itineraries, share.itinerary_id)
             if itinerary:
                 itinerary_data = itinerary.dict()
                 itinerary_data["days"] = []
-
+                share_objs = session.exec(
+                    select(ItineraryShares).where(ItineraryShares.itinerary_id == itinerary.itinerary_id)
+                ).all()
+                shared_users = []
+                for s in share_objs:
+                    user = session.get(Users, s.shared_with_user_id)
+                    if user:
+                        shared_users.append(UserPublicMinimal.model_validate(user))
+                itinerary_data["shared_users"] = shared_users
                 # Lấy thông tin hotel nếu có
                 if itinerary.hotel_id:
                     hotel_place = session.get(Places, itinerary.hotel_id)
@@ -331,15 +338,13 @@ class ItineraryShareService:
                         itinerary_data["hotel"] = None
                 else:
                     itinerary_data["hotel"] = None
-
                 # Lấy thông tin chủ sở hữu itinerary
                 owner = session.get(Users, itinerary.user_id)
                 if owner:
-                    from app.models import UserPublicMinimal
                     itinerary_data["owner"] = UserPublicMinimal.model_validate(owner)
                 else:
                     itinerary_data["owner"] = None
-
+            
                 itineraries.append(ItineraryPublic(**itinerary_data))
 
         pagination = PaginationMetadata(
