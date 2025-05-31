@@ -451,7 +451,7 @@ class ItineraryPublic(ItineraryBase):
     hotel: PlacePublic | None = None
     days: List[ItineraryDayPublic] | None = None
     shared_users: List[UserPublicMinimal] | None = None  
-    
+    owner: UserPublicMinimal | None = None
 
 
 class ItineraryResponse(ResponseWrapper[ItineraryPublic]):

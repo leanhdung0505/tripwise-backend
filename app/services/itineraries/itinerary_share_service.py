@@ -321,6 +321,7 @@ class ItineraryShareService:
             if itinerary:
                 itinerary_data = itinerary.dict()
                 itinerary_data["days"] = []
+
                 # Lấy thông tin hotel nếu có
                 if itinerary.hotel_id:
                     hotel_place = session.get(Places, itinerary.hotel_id)
@@ -330,6 +331,15 @@ class ItineraryShareService:
                         itinerary_data["hotel"] = None
                 else:
                     itinerary_data["hotel"] = None
+
+                # Lấy thông tin chủ sở hữu itinerary
+                owner = session.get(Users, itinerary.user_id)
+                if owner:
+                    from app.models import UserPublicMinimal
+                    itinerary_data["owner"] = UserPublicMinimal.model_validate(owner)
+                else:
+                    itinerary_data["owner"] = None
+
                 itineraries.append(ItineraryPublic(**itinerary_data))
 
         pagination = PaginationMetadata(

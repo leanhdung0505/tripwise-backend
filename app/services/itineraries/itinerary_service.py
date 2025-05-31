@@ -181,7 +181,7 @@ class ItineraryService:
     
     def update_itinerary(self, session: Session, user_id: UUID, itinerary_id: int, itinerary_in: ItineraryUpdate) -> ItineraryPublic:
         # Get the itinerary and verify ownership
-        itinerary = self._get_user_itinerary(session, user_id, itinerary_id)
+        itinerary = self._check_edit_permission(session, user_id, itinerary_id)
         
         # Validate dates if provided
         if itinerary_in.start_date and itinerary_in.end_date and itinerary_in.start_date > itinerary_in.end_date:
@@ -211,7 +211,7 @@ class ItineraryService:
     
     def delete_itinerary(self, session: Session, user_id: UUID, itinerary_id: int) -> Message:
     # Get the itinerary and verify ownership
-        itinerary = self._get_user_itinerary(session, user_id, itinerary_id)
+        itinerary = self._get_user_itinerary(session, user_id, day.itinerary_id)
 
         # Xóa tất cả các ngày và hoạt động liên quan
         days = crud_itinerary.get_days(session=session, itinerary_id=itinerary_id)
@@ -228,7 +228,7 @@ class ItineraryService:
     
     def add_day(self, session: Session, user_id: UUID, itinerary_id: int, day_in: ItineraryDayCreate) -> ItineraryDayPublic:
         # Get the itinerary and verify ownership
-        itinerary = self._get_user_itinerary(session, user_id, itinerary_id)
+        itinerary = self._check_edit_permission(session, user_id, itinerary_id)
 
         # Lấy tất cả các ngày hiện tại của itinerary, sắp xếp theo date
         days = crud_itinerary.get_days(session=session, itinerary_id=itinerary_id)
@@ -288,7 +288,7 @@ class ItineraryService:
             )
         
         # Get the itinerary and verify ownership
-        itinerary = self._get_user_itinerary(session, user_id, day.itinerary_id)
+        itinerary = self._check_edit_permission(session, user_id, day.itinerary_id)
         
         # Cập nhật end_date nếu ngày mới lớn hơn end_date hiện tại
         if day_in.date and day_in.date > itinerary.end_date:
@@ -323,7 +323,7 @@ class ItineraryService:
             )
 
         # Get the itinerary and verify ownership
-        itinerary = self._get_user_itinerary(session, user_id, day.itinerary_id)
+        itinerary = self._check_edit_permission(session, user_id, day.itinerary_id)
 
         # Lưu lại day_number và itinerary_id trước khi xóa
         deleted_day_number = day.day_number
@@ -367,7 +367,7 @@ class ItineraryService:
             )
         
         # Get the itinerary and verify ownership
-        self._get_user_itinerary(session, user_id, day.itinerary_id)
+        self._check_edit_permission(session, user_id, day.itinerary_id)
         
         # Kiểm tra trùng start_time trong ngày
         if activity_in.start_time:
@@ -408,7 +408,7 @@ class ItineraryService:
             )
 
         # Get the itinerary and verify ownership
-        self._get_user_itinerary(session, user_id, day.itinerary_id)
+        self._check_edit_permission(session, user_id, day.itinerary_id)
 
         # Nếu có cập nhật start_time, kiểm tra trùng trong ngày
         if activity_in.start_time:
@@ -462,8 +462,8 @@ class ItineraryService:
             )
         
         # Get the itinerary and verify ownership
+        self._check_edit_permission(session, user_id, day.itinerary_id)
         self._get_user_itinerary(session, user_id, day.itinerary_id)
-        
         crud_itinerary.delete_activity(session=session, activity_id=activity_id)
         return Message(detail="Activity deleted successfully")
     
@@ -484,5 +484,20 @@ class ItineraryService:
             )
         
         return itinerary
+    def _check_edit_permission(self, session: Session, user_id: UUID, itinerary_id: int):
+        itinerary = session.get(Itineraries, itinerary_id)
+        if not itinerary:
+            raise HTTPException(status_code=404, detail="Itinerary not found")
+        if str(itinerary.user_id) == str(user_id):
+            return
+        # Kiểm tra share với quyền edit
+        share = session.exec(
+            select(ItineraryShares).where(
+                (ItineraryShares.itinerary_id == itinerary_id) &
+                (ItineraryShares.shared_with_user_id == user_id)
+            )
+        ).first()
+        if not share or share.permission != "edit":
+            raise HTTPException(status_code=403, detail="You do not have permission to edit this itinerary")
 
 itinerary_service = ItineraryService()
