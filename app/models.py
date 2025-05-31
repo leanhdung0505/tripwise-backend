@@ -569,6 +569,14 @@ class GoogleUserInfo(BaseModel):
     locale: Optional[str] = None  # <-- sửa thành Optional
 
 
+class SharePermissionUpdate(BaseModel):
+    shared_with_user_id: uuid.UUID
+    permission: str
+
+class SharePermissionsUpdateRequest(BaseModel):
+    itinerary_id: int
+    updates: list[SharePermissionUpdate]
+    
 __all__ = [
     # Generic Wrapper
     "ResponseWrapper",
