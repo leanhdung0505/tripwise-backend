@@ -91,7 +91,12 @@ class ItineraryService:
         itinerary_data["hotel"] = None
         if itinerary.hotel_id:
             itinerary_data["hotel"] = self._get_place_with_details(session, itinerary.hotel_id)
-
+        owner = session.get(Users, itinerary.user_id)
+        if owner:
+            from app.models import UserPublicMinimal
+            itinerary_data["owner"] = UserPublicMinimal.model_validate(owner)
+        else:
+            itinerary_data["owner"] = None
         # Lấy danh sách user được share
         shares = session.exec(
             select(ItineraryShares).where(ItineraryShares.itinerary_id == itinerary_id)
