@@ -13,10 +13,12 @@ from app.models import (
     Itineraries,
     ItineraryPublic,
     PaginationMetadata,
-    PaginatedResponse
+    PaginatedResponse,
+    SharePermissionsUpdateRequest
 )
 from app.services.itineraries.itinerary_share_service import itinerary_share_service
 from app.services.users.user_service import user_service
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/itinerary-shares", tags=["itinerary-shares"])
 @router.get("/search-users-to-share", response_model=Dict[str, list[UserPublicMinimal]])
@@ -250,4 +252,21 @@ def get_shared_itineraries_for_user(
         limit=limit
     )
     return result
+
+@router.put("/permission/bulk-update-permissions", response_model=Message)
+def bulk_update_permissions(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    data: SharePermissionsUpdateRequest
+):
+    """
+    Update permissions for a list of shared users in an itinerary.
+    """
+    itinerary_share_service.update_permissions_for_shared_users(
+        session=session,
+        itinerary_id=data.itinerary_id,
+        updates=[u.dict() for u in data.updates]
+    )
+    return Message(detail="Permissions updated successfully")
 

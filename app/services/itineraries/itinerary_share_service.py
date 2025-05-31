@@ -202,6 +202,54 @@ class ItineraryShareService:
         )
         
         return self._get_share_with_details(session=session, share=share)
+    def update_permissions_for_shared_users(
+        self, session: Session, itinerary_id: int, updates: list[dict]
+    ):
+        """
+        updates: List of dicts, each with keys: shared_with_user_id (uuid.UUID), permission (str)
+        """
+        # Kiểm tra itinerary tồn tại
+        itinerary = session.get(Itineraries, itinerary_id)
+        if not itinerary:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Itinerary not found"
+            )
+
+        updated_shares = []
+        errors = []
+        for update in updates:
+            user_id = update.get("shared_with_user_id")
+            permission = update.get("permission")
+
+            # Kiểm tra permission hợp lệ
+            if permission not in ["view", "edit"]:
+                errors.append(f"Invalid permission '{permission}' for user {user_id}")
+                continue
+
+            # Kiểm tra user tồn tại
+            user = session.get(Users, user_id)
+            if not user:
+                errors.append(f"User {user_id} not found")
+                continue
+
+            # Kiểm tra share tồn tại
+            share = crud_itinerary_share.get_by_itinerary_and_user(session, itinerary_id, user_id)
+            if not share:
+                errors.append(f"Share for user {user_id} not found")
+                continue
+
+            # Cập nhật permission
+            share = crud_itinerary_share.update_permission(session, share, permission)
+            updated_shares.append(share)
+
+        if errors:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="; ".join(errors)
+            )
+
+        return updated_shares
     
     def update_share_permission(self, session: Session, share_id: int, permission: str, user_id: uuid.UUID) -> ItinerarySharePublic:
         share = crud_itinerary_share.get_by_id(session=session, share_id=share_id)
@@ -325,10 +373,19 @@ class ItineraryShareService:
                 ).all()
                 shared_users = []
                 for s in share_objs:
-                    user = session.get(Users, s.shared_with_user_id)
-                    if user:
-                        shared_users.append(UserPublicMinimal.model_validate(user))
+                    user_obj = session.get(Users, s.shared_with_user_id)
+                    if user_obj:
+                        shared_user_with_permission = UserPublicMinimal(
+                            user_id=user_obj.user_id,
+                            username=user_obj.username,
+                            full_name=user_obj.full_name,
+                            email=user_obj.email,
+                            profile_picture=user_obj.profile_picture,
+                            permissions=s.permission 
+                        )
+                    shared_users.append(shared_user_with_permission)
                 itinerary_data["shared_users"] = shared_users
+                
                 # Lấy thông tin hotel nếu có
                 if itinerary.hotel_id:
                     hotel_place = session.get(Places, itinerary.hotel_id)
@@ -337,11 +394,18 @@ class ItineraryShareService:
                     else:
                         itinerary_data["hotel"] = None
                 else:
-                    itinerary_data["hotel"] = None
+                    itinerary_data["hotel"] = None        
                 # Lấy thông tin chủ sở hữu itinerary
                 owner = session.get(Users, itinerary.user_id)
                 if owner:
-                    itinerary_data["owner"] = UserPublicMinimal.model_validate(owner)
+                    itinerary_data["owner"] = UserPublicMinimal(
+                        user_id=owner.user_id,
+                        username=owner.username,
+                        full_name=owner.full_name,
+                        email=owner.email,
+                        profile_picture=owner.profile_picture,
+                        permissions="owner"  
+                    )
                 else:
                     itinerary_data["owner"] = None
             

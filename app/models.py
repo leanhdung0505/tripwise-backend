@@ -442,6 +442,7 @@ class UserPublicMinimal(SQLModel):
     full_name: str
     email: str
     profile_picture: str | None = None
+    permissions : Optional[str] = None
     
 class ItineraryPublic(ItineraryBase):
     itinerary_id: int
@@ -476,15 +477,6 @@ class ItineraryShareCreate(ItineraryShareBase):
 
 class ItineraryShareUpdate(SQLModel):
     permission: Optional[str] = Field(None, description="Permission level: view or edit")
-
-
-class UserPublicMinimal(SQLModel):
-    user_id: uuid.UUID
-    username: str
-    full_name: str
-    email: str
-    profile_picture: str | None = None
-
 
 class ItineraryPublicMinimal(SQLModel):
     itinerary_id: int
@@ -577,6 +569,14 @@ class GoogleUserInfo(BaseModel):
     locale: Optional[str] = None  # <-- sửa thành Optional
 
 
+class SharePermissionUpdate(BaseModel):
+    shared_with_user_id: uuid.UUID
+    permission: str
+
+class SharePermissionsUpdateRequest(BaseModel):
+    itinerary_id: int
+    updates: list[SharePermissionUpdate]
+    
 __all__ = [
     # Generic Wrapper
     "ResponseWrapper",

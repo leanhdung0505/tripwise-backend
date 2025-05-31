@@ -93,8 +93,14 @@ class ItineraryService:
             itinerary_data["hotel"] = self._get_place_with_details(session, itinerary.hotel_id)
         owner = session.get(Users, itinerary.user_id)
         if owner:
-            from app.models import UserPublicMinimal
-            itinerary_data["owner"] = UserPublicMinimal.model_validate(owner)
+            itinerary_data["owner"] = UserPublicMinimal(
+                user_id=owner.user_id,
+                username=owner.username,
+                full_name=owner.full_name,
+                email=owner.email,
+                profile_picture=owner.profile_picture,
+                permissions="owner"  
+            )
         else:
             itinerary_data["owner"] = None
         # Lấy danh sách user được share
@@ -102,10 +108,18 @@ class ItineraryService:
             select(ItineraryShares).where(ItineraryShares.itinerary_id == itinerary_id)
         ).all()
         shared_users = []
-        for share in shares:
-            user = session.get(Users, share.shared_with_user_id)
-            if user:
-                shared_users.append(UserPublicMinimal.model_validate(user))
+        for s in shares:
+            user_obj = session.get(Users, s.shared_with_user_id)
+            if user_obj:
+                shared_user_with_permission = UserPublicMinimal(
+                    user_id=user_obj.user_id,
+                    username=user_obj.username,
+                    full_name=user_obj.full_name,
+                    email=user_obj.email,
+                    profile_picture=user_obj.profile_picture,
+                    permissions=s.permission 
+                )
+            shared_users.append(shared_user_with_permission)
         itinerary_data["shared_users"] = shared_users
 
         return ItineraryPublic(**itinerary_data)
@@ -134,16 +148,23 @@ class ItineraryService:
             itinerary_data["hotel"] = None
             if itinerary.hotel_id:
                 itinerary_data["hotel"] = self._get_place_with_details(session, itinerary.hotel_id)
-
             # Lấy danh sách user được share
             shares = session.exec(
                 select(ItineraryShares).where(ItineraryShares.itinerary_id == itinerary.itinerary_id)
             ).all()
             shared_users = []
-            for share in shares:
-                user = session.get(Users, share.shared_with_user_id)
-                if user:
-                    shared_users.append(UserPublicMinimal.model_validate(user))
+            for s in shares:
+                user_obj = session.get(Users, s.shared_with_user_id)
+                if user_obj:
+                    shared_user_with_permission = UserPublicMinimal(
+                        user_id=user_obj.user_id,
+                        username=user_obj.username,
+                        full_name=user_obj.full_name,
+                        email=user_obj.email,
+                        profile_picture=user_obj.profile_picture,
+                        permissions=s.permission 
+                    )
+                shared_users.append(shared_user_with_permission)
             itinerary_data["shared_users"] = shared_users
 
             itineraries_with_data.append(ItineraryPublic(**itinerary_data))
