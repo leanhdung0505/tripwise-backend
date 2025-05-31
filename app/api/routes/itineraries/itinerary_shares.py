@@ -12,7 +12,8 @@ from app.models import (
     UserPublicMinimal,
     Itineraries,
     ItineraryPublic,
-    PaginationMetadata
+    PaginationMetadata,
+    PaginatedResponse
 )
 from app.services.itineraries.itinerary_share_service import itinerary_share_service
 from app.services.users.user_service import user_service
@@ -229,25 +230,18 @@ def get_itinerary_shares(
         page=page, 
         limit=limit
     )
-@router.get("/user/{user_id}/shared-itineraries", response_model=Dict[str, list[ItineraryPublic]])
+@router.get("/me/shared-itineraries", response_model=PaginatedResponse[ItineraryPublic])
 def get_shared_itineraries_for_user(
     *,
     session: SessionDep,
     current_user: CurrentUser,
-    user_id: str = Path(..., description="User ID"),
     page: int = Query(1, ge=1, description="Page number"),
     limit: int = Query(10, ge=1, le=100, description="Number of items per page")
 ) -> Dict[str, Any]:
     """
     Get all itineraries shared with a specific user.
     """
-    try:
-        user_uuid = uuid.UUID(user_id)
-    except ValueError:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid UUID format for user_id"
-        )
+    user_uuid = current_user.user_id
 
     result = itinerary_share_service.get_shared_itineraries_for_user(
         session=session,

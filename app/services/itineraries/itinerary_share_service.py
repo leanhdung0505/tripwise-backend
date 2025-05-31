@@ -4,8 +4,9 @@ from typing import List, Optional, Dict, Any
 import uuid
 from app.models import (
     Message, ItineraryShares, Users, Itineraries,
-    PaginationMetadata, ItinerarySharePublic, ItineraryPublic
+    PaginationMetadata, ItinerarySharePublic, ItineraryPublic,Places
 )
+from app.services.places.place_service import place_service
 from app.crud.itineraries.crud_itinerary_share import crud_itinerary_share
 
 
@@ -318,7 +319,18 @@ class ItineraryShareService:
         for share in shares:
             itinerary = session.get(Itineraries, share.itinerary_id)
             if itinerary:
-                itineraries.append(ItineraryPublic.model_validate(itinerary))
+                itinerary_data = itinerary.dict()
+                itinerary_data["days"] = []
+                # Lấy thông tin hotel nếu có
+                if itinerary.hotel_id:
+                    hotel_place = session.get(Places, itinerary.hotel_id)
+                    if hotel_place:
+                        itinerary_data["hotel"] = place_service._get_place_with_details(session, hotel_place)
+                    else:
+                        itinerary_data["hotel"] = None
+                else:
+                    itinerary_data["hotel"] = None
+                itineraries.append(ItineraryPublic(**itinerary_data))
 
         pagination = PaginationMetadata(
             page=page,
@@ -330,7 +342,7 @@ class ItineraryShareService:
 
         return {
             "data": itineraries,
-            "pagination": pagination
+            "pagination": pagination.model_dump()
         }
 
 itinerary_share_service = ItineraryShareService()
