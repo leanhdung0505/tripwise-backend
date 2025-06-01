@@ -237,7 +237,7 @@ class ItineraryService:
     
     def delete_itinerary(self, session: Session, user_id: UUID, itinerary_id: int) -> Message:
     # Get the itinerary and verify ownership
-        itinerary = self._get_user_itinerary(session, user_id, day.itinerary_id)
+        itinerary = self._get_user_itinerary(session, user_id, itinerary_id)
 
         # Xóa tất cả các ngày và hoạt động liên quan
         days = crud_itinerary.get_days(session=session, itinerary_id=itinerary_id)
