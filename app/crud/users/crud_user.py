@@ -40,6 +40,8 @@ class CRUDUser:
             return None
         if not verify_password(password, user.password):
             return None
+        if not user.is_active:
+            return None
         return user
 
     def update_password(self, session: Session, user: Users, new_password: str) -> Users:

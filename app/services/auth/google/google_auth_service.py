@@ -63,7 +63,13 @@ class GoogleAuthService:
         existing_user = crud_user.get_by_email(session=session, email=google_user.email)
         
         if existing_user:
-            # User exists, login directly
+            # User exists, check if active
+            if not existing_user.is_active:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="User account is inactive"
+                )
+            # User exists and active, login directly
             user = existing_user
         else:
             # Create new user with Google info
@@ -73,7 +79,8 @@ class GoogleAuthService:
                 full_name=google_user.name,
                 profile_picture=google_user.picture,
                 password="google_oauth_user",  # Placeholder password for OAuth users
-                role="user"  # Default role
+                role="user",  # Default role
+                is_active=True  # New users are active by default
             )
             
             # Check if username already exists, if so, append numbers
