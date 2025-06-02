@@ -7,10 +7,11 @@ from app.core.config import settings
 from app.core.security import create_access_token, get_password_hash, verify_password
 from app.models import Message, ChangePassword, NewPassword
 from app.repository.response.login_response import Token
+from app.services.fcm.fcm_service import fcm_service
 
 class AuthService:
     @staticmethod
-    def login_access_token(session: Session, email: str, password: str) -> Token:
+    def login_access_token(session: Session, email: str, password: str, fcm_token: str = None, device: str = None) -> Token:
         user = crud_user.authenticate(session=session, email=email, password=password)
         if not user:
             raise HTTPException(
@@ -18,6 +19,8 @@ class AuthService:
                 detail="Incorrect email or password"
             )
 
+        if fcm_token and device:
+            fcm_service.register_token_on_login(session, user.user_id, fcm_token, device)
         access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         token = create_access_token(user.user_id, expires_delta=access_token_expires)
         return Token(access_token=token)
@@ -63,5 +66,22 @@ class AuthService:
         session.add(user)
         session.commit()
         return Message(detail="Password reset successfully")
+    @staticmethod
+    def logout_user(session: Session, user_id: str, fcm_token: str = None) -> Message:
+        """Logout user and deactivate FCM token"""
+        if fcm_token:
+            # Deactivate specific token
+            fcm_service.deactivate_token_on_logout(session, user_id, fcm_token)
+        else:
+            # Deactivate all tokens if no specific token provided
+            fcm_service.deactivate_all_user_tokens(session, user_id)
+        
+        return Message(detail="Logged out successfully")
 
+    @staticmethod
+    def logout_from_all_devices(session: Session, user_id: str) -> Message:
+        """Logout user from all devices by deactivating all FCM tokens"""
+        fcm_service.deactivate_all_user_tokens(session, user_id)
+        return Message(detail="Logged out from all devices successfully")
+    
 auth_service = AuthService()

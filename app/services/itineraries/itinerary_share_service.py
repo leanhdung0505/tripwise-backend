@@ -8,6 +8,7 @@ from app.models import (
 )
 from app.services.places.place_service import place_service
 from app.crud.itineraries.crud_itinerary_share import crud_itinerary_share
+from app.services.fcm.fcm_service import fcm_service
 
 
 class ItineraryShareService:
@@ -200,6 +201,21 @@ class ItineraryShareService:
             shared_with_user_id=shared_with_user_id, 
             permission=permission
         )
+
+        # Get owner info and send notification
+        owner = session.get(Users, itinerary.user_id)
+        if owner:
+            try:
+                fcm_service.send_share_notification(
+                    session=session,
+                    shared_with_user_id=str(shared_with_user_id),
+                    owner_name=owner.full_name,
+                    itinerary_id=str(itinerary_id),
+                    permission=permission
+                )
+            except Exception:
+                # Log error but continue if notification fails
+                pass
         
         return self._get_share_with_details(session=session, share=share)
     def update_permissions_for_shared_users(

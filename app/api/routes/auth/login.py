@@ -17,7 +17,9 @@ def login_access_token(
         data=auth_service.login_access_token(
             session=session,
             email=login_data.email,
-            password=login_data.password
+            password=login_data.password,
+            device=login_data.device,
+            fcm_token=login_data.fcm_token
         )
     )
 @router.post("/test-token", response_model=UserResponse)
