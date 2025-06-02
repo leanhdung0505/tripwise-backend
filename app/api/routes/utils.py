@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Body, Depends, Query, status
 from fastapi.responses import JSONResponse
 from pydantic.networks import EmailStr
 
 from app.api.deps import get_current_active_superuser
 from app.models import Message
 # from app.utils import generate_test_email, send_email
+import firebase_admin
 
 router = APIRouter(prefix="/utils", tags=["utils"])
 
@@ -46,3 +47,35 @@ router = APIRouter(prefix="/utils", tags=["utils"])
 @router.get("/health-check/")
 async def health_check() -> bool:
     return True
+
+
+@router.get("/firebase-health/")
+async def firebase_health_check() -> dict:
+    """
+    Kiểm tra Firebase Admin SDK đã được khởi tạo thành công chưa.
+    """
+    is_initialized = bool(firebase_admin._apps)
+    return {"firebase_initialized": is_initialized}
+
+
+@router.post("/test-fcm/")
+async def test_send_fcm_notification(
+    token: str = Body(..., embed=True),
+):
+    """
+    Test gửi notification FCM đến 1 device token.
+    """
+    from firebase_admin import messaging
+
+    try:
+        message = messaging.Message(
+            notification=messaging.Notification(
+                title="Test Notification",
+                body="This is a test FCM notification from TripWise backend."
+            ),
+            token=token
+        )
+        response = messaging.send(message)
+        return {"success": True, "response": response}
+    except Exception as e:
+        return {"success": False, "error": str(e)}

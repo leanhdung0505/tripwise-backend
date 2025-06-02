@@ -515,7 +515,7 @@ class ItineraryService:
         if not itinerary:
             raise HTTPException(status_code=404, detail="Itinerary not found")
         if str(itinerary.user_id) == str(user_id):
-            return
+            return itinerary  # <-- sửa ở đây
         # Kiểm tra share với quyền edit
         share = session.exec(
             select(ItineraryShares).where(
@@ -525,5 +525,6 @@ class ItineraryService:
         ).first()
         if not share or share.permission != "edit":
             raise HTTPException(status_code=403, detail="You do not have permission to edit this itinerary")
+        return itinerary  # <-- và ở đây cũng trả về itinerary
 
 itinerary_service = ItineraryService()
