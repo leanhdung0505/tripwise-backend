@@ -24,7 +24,9 @@ async def google_login(
     """
     token = await google_auth_service.google_login(
         session=session,
-        google_token=google_data.token
+        google_token=google_data.token,
+        fcm_token=google_data.fcm_token,
+        device=google_data.device
     )
     
     return LoginResponse(data=token)
