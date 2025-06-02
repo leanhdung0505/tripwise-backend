@@ -4,7 +4,7 @@ from sqlmodel import Session
 from app.api.deps import SessionDep, CurrentUser
 from app.models import FCMTokens, Message
 from app.services.fcm.fcm_service import fcm_service
-from app.services.auth import auth_service
+from app.services.auth.auth_service import auth_service
 router = APIRouter(prefix="/logout", tags=["auth"])
 
 @router.post("")
