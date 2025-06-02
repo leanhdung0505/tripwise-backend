@@ -4,63 +4,69 @@ import os
 from typing import List, Dict, Any, Optional
 from sqlmodel import Session
 from app.crud.fcm.crud_fcm import crud_fcm
-
+from app.core.config import settings
 class FCMService:
     def __init__(self):
         # Chỉ khởi tạo 1 lần
         if not firebase_admin._apps:
             cred = credentials.Certificate(
-                os.path.join(os.path.dirname(""), os.getenv("FIREBASE_CREDENTIAL_PATH"))
+                settings.FIREBASE_CREDENTIAL_PATH  # Assuming settings is imported from app.core.config
             )
             firebase_admin.initialize_app(cred)
-
-    def send_notification(self, token: str, title: str, body: str, data: Dict[str, Any] = None) -> str:
-        """Send FCM notification to a single token"""
-        message = messaging.Message(
-            notification=messaging.Notification(
-                title=title,
-                body=body
-            ),
-            token=token,
-            data=data or {}
-        )
-        return messaging.send(message)
-
-    def send_notifications(self, tokens: List[str], title: str, body: str, data: Dict[str, Any] = None) -> List[str]:
-        """Send FCM notification to multiple tokens"""
-        if not tokens:
-            return []
-
-        message = messaging.MulticastMessage(
-            notification=messaging.Notification(
-                title=title,
-                body=body
-            ),
-            tokens=tokens,
-            data=data or {}
-        )
-        response = messaging.send_multicast(message)
-        return [result.message_id for result in response.responses if result.success]
 
     def send_share_notification(self, session: Session, shared_with_user_id: str, owner_name: str, itinerary_id: str, permission: str) -> List[str]:
         """Send notification when an itinerary is shared"""
         # Get active tokens from crud
-        tokens = crud_fcm.get_active_tokens(session, shared_with_user_id)
-        fcm_tokens = [token.fcm_token for token in tokens]
-        
-        return self.send_notifications(
-            tokens=fcm_tokens,
-            title="Chia sẻ lịch trình mới",
-            body=f"{owner_name} đã chia sẻ một lịch trình với bạn",
+        tokens_objs = crud_fcm.get_active_tokens(session, shared_with_user_id)
+        tokens: List[str] = [t.fcm_token for t in tokens_objs if t.is_active]
+        return self.send_notification(
+            tokens=tokens,
+            title="Share new itinerary",
+            body=f"{owner_name} shared a new itinerary with you",
             data={
                 "type": "itinerary_share",
                 "itinerary_id": itinerary_id,
                 "permission": permission
             }
         )
-
+    def send_notification(self, tokens: str | List[str], title: str, body: str, data: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+        try:
+            results = []
+            # Nếu là list, gửi từng token một
+            if isinstance(tokens, list):
+                for token in tokens:
+                    if not token:
+                        continue
+                    message = messaging.Message(
+                        notification=messaging.Notification(
+                            title=title,
+                            body=body
+                        ),
+                        data=data,
+                        token=token
+                    )
+                    response = messaging.send(message)
+                    results.append({"token": token, "message_id": response})
+                return {"success": True, "results": results}
+            # Nếu là string, gửi một token
+            elif isinstance(tokens, str) and tokens:
+                message = messaging.Message(
+                    notification=messaging.Notification(
+                        title=title,
+                        body=body
+                    ),
+                    data=data,
+                    token=tokens
+                )
+                response = messaging.send(message)
+                return {"success": True, "message_id": response}
+            else:
+                return {"success": False, "error": "No valid token(s) provided"}
+        except Exception as e:
+            print(f"Error sending notification: {e}")
+            return {"success": False, "error": str(e)}
     def register_token_on_login(self, session: Session, user_id: str, fcm_token: str, device: str) -> object:
-        """Register or reactivate FCM token when user logs in"""
+        """Register orreactivate FCM token when user logs in"""
         return crud_fcm.create_or_update_token(session, user_id, fcm_token, device)
 
     def register_token(self, session: Session, user_id: str, fcm_token: str, device: str):

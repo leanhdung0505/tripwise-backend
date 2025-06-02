@@ -4,13 +4,13 @@ import os
 from typing import List, Dict, Any, Optional
 from sqlmodel import Session, select
 from app.models import FCMTokens
-
+from app.core.config import settings  # Assuming settings is imported from app.core.config
 class CRUDFcm:
     def __init__(self):
         # Chỉ khởi tạo 1 lần
         if not firebase_admin._apps:
             cred = credentials.Certificate(
-                os.path.join(os.path.dirname(""), os.getenv("FIREBASE_CREDENTIAL_PATH"))
+                settings.FIREBASE_CREDENTIAL_PATH  # Assuming settings is imported from app.core.config
             )
             firebase_admin.initialize_app(cred)
 
@@ -135,47 +135,6 @@ class CRUDFcm:
             session.commit()
             return True
         return False
-
-    def send_notification(self, token: str, title: str, body: str, data: Dict[str, Any] = None) -> str:
-        """Send FCM notification to a single token"""
-        message = messaging.Message(
-            notification=messaging.Notification(
-                title=title,
-                body=body
-            ),
-            token=token,
-            data=data or {}
-        )
-        return messaging.send(message)
-
-    def send_notifications(self, tokens: List[str], title: str, body: str, data: Dict[str, Any] = None) -> List[str]:
-        """Send FCM notification to multiple tokens"""
-        if not tokens:
-            return []
-
-        message = messaging.MulticastMessage(
-            notification=messaging.Notification(
-                title=title,
-                body=body
-            ),
-            tokens=tokens,
-            data=data or {}
-        )
-        response = messaging.send_multicast(message)
-        return [result.message_id for result in response.responses if result.success]
-
-    def send_share_notification(self, tokens: List[str], owner_name: str, itinerary_id: str, permission: str) -> List[str]:
-        """Send notification when an itinerary is shared"""
-        return self.send_notifications(
-            tokens=tokens,
-            title="Share new itinerary",
-            body=f"{owner_name} shared a new itinerary with you",
-            data={
-                "type": "itinerary_share",
-                "itinerary_id": itinerary_id,
-                "permission": permission
-            }
-        )
 
 # Create and export an instance
 crud_fcm = CRUDFcm()
