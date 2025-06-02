@@ -47,6 +47,10 @@ class Users(SQLModel, table=True):
         back_populates="shared_with_user",
         sa_relationship_kwargs={"cascade": "all, delete"}
     )
+    fcm_tokens: List["FCMTokens"] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"cascade": "all, delete"}
+    )
 
 class Places(SQLModel, table=True):
     __tablename__ = "places"
@@ -204,7 +208,20 @@ class ItineraryShares(SQLModel, table=True):
     # Relationships
     itinerary: Itineraries = Relationship(back_populates="shares")
     shared_with_user: Users = Relationship(back_populates="shared_itineraries")
-    
+class FCMTokens(SQLModel, table=True):
+    __tablename__ = "fcm_tokens"
+
+    token_id: int = Field(default=None, primary_key=True)
+    user_id: uuid.UUID = Field(foreign_key="users.user_id")
+    fcm_token: str = Field(max_length=255)
+    device: str = Field(max_length=100)
+    is_active: bool = Field(default=True)
+    created_at: datetime = Field(default_factory=datetime.now)
+    last_used_at: datetime = Field(default_factory=datetime.now)
+
+    # Relationships
+    user: Users = Relationship(back_populates="fcm_tokens")
+
 # API Request/Response Models
 class PlaceBase(SQLModel):
     name: str

@@ -25,7 +25,7 @@ from app.models import (
     Itineraries,
     ItineraryDays,
     ItineraryActivities,
-    
+    FCMTokens,
 )  # noqa
 
 # Gán metadata để Alembic autogenerate migration script
