@@ -4,6 +4,7 @@ from fastapi import HTTPException, status
 from sqlmodel import Session
 from google.auth.transport import requests
 from google.oauth2 import id_token
+from typing import Optional
 
 from app.crud.users.crud_user import crud_user
 from app.core.config import settings
@@ -12,6 +13,7 @@ from app.models import Users
 from app.repository.request.user_request import UserCreate
 from app.models import GoogleUserInfo
 from app.repository.response.login_response import Token
+from app.services.fcm.fcm_service import fcm_service
 
 class GoogleAuthService:
     @staticmethod
@@ -41,7 +43,12 @@ class GoogleAuthService:
             )
     
     @staticmethod
-    async def google_login(session: Session, google_token: str) -> Token:
+    async def google_login(
+        session: Session, 
+        google_token: str, 
+        fcm_token: Optional[str] = None, 
+        device: Optional[str] = None
+    ) -> Token:
         """Login or register user with Google OAuth"""
         # Verify token and get user info from Google
         google_user = await GoogleAuthService.verify_google_token(google_token)
@@ -83,6 +90,10 @@ class GoogleAuthService:
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail=f"Failed to create user: {str(e)}"
                 )
+        
+        # Xử lý FCM token khi login Google (tương tự như login thường)
+        if fcm_token and device:
+            fcm_service.register_token_on_login(session, user.user_id, fcm_token, device)
         
         # Create access token
         access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)

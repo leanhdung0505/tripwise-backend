@@ -574,7 +574,8 @@ class Message(SQLModel):
 
 class GoogleLoginRequest(BaseModel):
     token: str  # Google ID token từ frontend
-
+    fcm_token: Optional[str] = None  # FCM token for push notifications
+    device: Optional[str] = None 
 class GoogleUserInfo(BaseModel):
     id: str
     email: str
