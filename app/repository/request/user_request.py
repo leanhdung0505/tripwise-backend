@@ -12,12 +12,15 @@ class UserCreate(SQLModel):
     full_name: str
     profile_picture: Optional[str] = None
     role: Optional[str] = "user"
+    is_active: Optional[bool] = True
 
 class UserUpdate(SQLModel):
     username: Optional[str] = None
     email: Optional[EmailStr] = None
     full_name: Optional[str] = None
     profile_picture: Optional[str] = None
+    role: Optional[str] = None
+    is_active: Optional[bool] = None
     preferences: Optional[Dict[str, Any]] = None
     budget_preference: Optional[int] = None
 

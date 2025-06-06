@@ -38,6 +38,7 @@ class Users(SQLModel, table=True):
     profile_picture: str | None = Field(max_length=255, default=None)  # Changed from avt_img
     preferences: Dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
     budget_preference: int | None = Field(default=None)
+    is_active: bool = Field(default=True)  # Added is_active field
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
 
