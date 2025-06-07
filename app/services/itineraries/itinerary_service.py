@@ -3,7 +3,7 @@ from sqlmodel import Session, select
 from typing import List, Dict, Any, Optional
 from uuid import UUID
 from app.models import (
-    Message, Itineraries, ItineraryCreate, ItineraryUpdate, ItineraryPublic,
+    FavoriteItineraries, Message, Itineraries, ItineraryCreate, ItineraryUpdate, ItineraryPublic,
     ItineraryDays, ItineraryDayCreate, ItineraryDayUpdate, ItineraryDayPublic,
     ItineraryActivities, ItineraryActivityCreate, ItineraryActivityUpdate, ItineraryActivityPublic,
     PaginationMetadata, PaginatedResponse, Places, PlacePublic,
@@ -63,7 +63,7 @@ class ItineraryService:
         
         return PlacePublic(**place_data)
 
-    def get_itinerary(self, session: Session, itinerary_id: int) -> ItineraryPublic:
+    def get_itinerary(self, session: Session, itinerary_id: int,current_user: Users = None) -> ItineraryPublic:
         itinerary = crud_itinerary.get_by_id(session=session, itinerary_id=itinerary_id)
         if not itinerary:
             raise HTTPException(
@@ -121,7 +121,18 @@ class ItineraryService:
                 )
             shared_users.append(shared_user_with_permission)
         itinerary_data["shared_users"] = shared_users
-
+        is_favorite = False
+        if current_user:
+            user_id = getattr(current_user, "user_id", current_user)
+            fav = session.exec(
+                select(FavoriteItineraries).where(
+                    (FavoriteItineraries.user_id == user_id) &
+                    (FavoriteItineraries.itinerary_id == itinerary_id)
+                )
+            ).first()
+            is_favorite = bool(fav)
+            print(f"Is favorite: {is_favorite}")
+        itinerary_data["is_favorite"] = is_favorite
         return ItineraryPublic(**itinerary_data)
     
     def get_itineraries(self, session: Session, user_id: UUID = None, destination: str = None, page: int = 1, limit: int = 10) -> Dict[str, Any]:

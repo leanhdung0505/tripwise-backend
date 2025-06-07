@@ -51,7 +51,7 @@ def read_itinerary(
     """
     Get itinerary by ID.
     """
-    itinerary = itinerary_service.get_itinerary(session=session, itinerary_id=itinerary_id)
+    itinerary = itinerary_service.get_itinerary(session=session, itinerary_id=itinerary_id,current_user=current_user.user_id)
     return ItineraryResponse(data=itinerary)
 
 @router.post("", response_model=ItineraryResponse)

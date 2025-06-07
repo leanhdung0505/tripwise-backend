@@ -47,6 +47,7 @@ def get_favorite_itineraries(
     for i in itineraries:
         item = ItineraryPublic.model_validate(i).model_dump()
         item["days"] = None
+        item["is_favorite"] = True
         data.append(item)
     return PaginatedResponse[ItineraryPublic](
         data=data,
