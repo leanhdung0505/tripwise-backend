@@ -6,7 +6,7 @@ from app.api.routes.email import otp_service
 from app.core.config import settings
 from app.api.routes.users import admin, users
 from app.api.routes.places import places,attractions,hotels,restaurants
-from app.api.routes.itineraries import itinerary,ai_itinerary,itinerary_shares
+from app.api.routes.itineraries import itinerary,ai_itinerary,itinerary_shares, itinerary_favorite
 api_router = APIRouter()
 
 
@@ -37,6 +37,7 @@ api_router.include_router(restaurants.router)
 api_router.include_router(itinerary.router)
 api_router.include_router(ai_itinerary.router)
 api_router.include_router(itinerary_shares.router)
+api_router.include_router(itinerary_favorite.router)
 
 # Other utilities
 api_router.include_router(utils.router)

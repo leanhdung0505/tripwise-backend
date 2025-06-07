@@ -52,6 +52,10 @@ class Users(SQLModel, table=True):
         back_populates="user",
         sa_relationship_kwargs={"cascade": "all, delete"}
     )
+    favorite_itineraries: List["FavoriteItineraries"] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"cascade": "all, delete"}
+    )
 
 class Places(SQLModel, table=True):
     __tablename__ = "places"
@@ -164,6 +168,10 @@ class Itineraries(SQLModel, table=True):
         back_populates="itinerary", 
         sa_relationship_kwargs={"cascade": "all, delete"}
     )
+    favorite_by: List["FavoriteItineraries"] = Relationship(
+        back_populates="itinerary",
+        sa_relationship_kwargs={"cascade": "all, delete"}
+    )
 
 class ItineraryDays(SQLModel, table=True):
     __tablename__ = "itinerary_days"
@@ -222,7 +230,17 @@ class FCMTokens(SQLModel, table=True):
 
     # Relationships
     user: Users = Relationship(back_populates="fcm_tokens")
+class FavoriteItineraries(SQLModel, table=True):
+    __tablename__ = "favorite_itineraries"
 
+    favorite_id: int = Field(default=None, primary_key=True)
+    user_id: uuid.UUID = Field(foreign_key="users.user_id")
+    itinerary_id: int = Field(foreign_key="itineraries.itinerary_id")
+    created_at: datetime = Field(default_factory=datetime.now)
+
+    # Relationships
+    user: "Users" = Relationship(back_populates="favorite_itineraries")
+    itinerary: "Itineraries" = Relationship(back_populates="favorite_by")
 # API Request/Response Models
 class PlaceBase(SQLModel):
     name: str
@@ -668,6 +686,7 @@ __all__ = [
     "ItineraryPublicMinimal",
     "ItineraryResponse",
     "ItinerariesResponse",
+    "FavoriteItineraries",
     
     # Itinerary Day Models
     "ItineraryDayBase",
