@@ -6,7 +6,7 @@ from app.api.deps import SessionDep, CurrentUser
 from app.models import Itineraries, ItineraryShares, Message, ItineraryPublic, PaginatedResponse, PaginationMetadata
 from app.crud.itineraries.crud_favorite import crud_favorite
 
-router = APIRouter(prefix="/api", tags=["Itinerary Favorite"])
+router = APIRouter(prefix="", tags=["Itinerary Favorite"])
 
 @router.get("/favorite-itineraries", response_model=PaginatedResponse[ItineraryPublic])
 def get_favorite_itineraries(
