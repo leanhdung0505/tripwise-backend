@@ -5,6 +5,7 @@ from sqlalchemy import func
 from app.api.deps import SessionDep, CurrentUser
 from app.models import Itineraries, ItineraryShares, Message, ItineraryPublic, PaginatedResponse, PaginationMetadata
 from app.crud.itineraries.crud_favorite import crud_favorite
+from app.models import Users, UserPublicMinimal
 
 router = APIRouter(prefix="", tags=["Itinerary Favorite"])
 
@@ -48,6 +49,21 @@ def get_favorite_itineraries(
         item = ItineraryPublic.model_validate(i).model_dump()
         item["days"] = None
         item["is_favorite"] = True
+
+        # Lấy thông tin owner
+        owner = session.get(Users, i.user_id)
+        if owner:
+            item["owner"] = UserPublicMinimal(
+                user_id=owner.user_id,
+                username=owner.username,
+                full_name=owner.full_name,
+                email=owner.email,
+                profile_picture=owner.profile_picture,
+                permissions="owner"
+            )
+        else:
+            item["owner"] = None
+
         data.append(item)
     return PaginatedResponse[ItineraryPublic](
         data=data,
