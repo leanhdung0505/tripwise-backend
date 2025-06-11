@@ -1,10 +1,11 @@
 # app/api/routes/user/users.py
 
-from fastapi import APIRouter, Body, Depends, logger
+from fastapi import APIRouter, Body, Depends, logger, UploadFile, File
 from app.api.deps import CurrentUser, SessionDep
-from app.models import Message, ChangePassword
+from app.models import ImageUploadPublic, ImageUploadResponse, Message, ChangePassword
 from app.services.users.user_service import user_service
 from app.services.auth.auth_service import auth_service
+from app.services.cloudinary.cloudinary_service import upload_image_to_cloudinary
 from app.repository.response.user_response import UserResponse, UserUpdateMe
 from app.repository.request.user_request import UserUpdate
 router = APIRouter(prefix="/users", tags=["users"])
@@ -64,4 +65,18 @@ def delete_user_me(
         session=session,
         current_user=current_user
     )
+
+
+@router.post("/me/avatar", response_model=ImageUploadResponse)
+def upload_avatar(
+    *,
+    file: UploadFile = File(...)
+) -> ImageUploadResponse :
+    """
+    Upload avatar to Cloudinary and update user's profile_picture.
+    """
+    # Upload lên Cloudinary
+    image_url = upload_image_to_cloudinary(file.file)
+    # Update user
+    return ImageUploadResponse(data=ImageUploadPublic(image_url=image_url))
 
