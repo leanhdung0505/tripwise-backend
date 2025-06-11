@@ -587,7 +587,10 @@ class OTPVerifyPublic(SQLModel):
 class OTPVerifyResponse(ResponseWrapper[OTPVerifyPublic]):
     pass
 
-
+class ImageUploadPublic(SQLModel):
+    image_url: str
+class ImageUploadResponse(ResponseWrapper[ImageUploadPublic]):
+    pass
 class Message(SQLModel):
     detail: str
 

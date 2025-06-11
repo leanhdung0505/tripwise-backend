@@ -125,5 +125,8 @@ class Settings(BaseSettings):
     PORT: int = int(os.getenv("PORT", 8080))
     HOST: str = "0.0.0.0"
     FIREBASE_CREDENTIAL_PATH: str = "trip-wise-fca39-firebase-adminsdk-fbsvc-b248fdd118.json"
+    CLOUDINARY_CLOUD_NAME: str
+    CLOUDINARY_API_KEY: str
+    CLOUDINARY_API_SECRET: str
 
 settings = Settings()  # type: ignore
