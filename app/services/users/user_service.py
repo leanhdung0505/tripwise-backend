@@ -29,6 +29,13 @@ class UserService:
                     status_code=status.HTTP_409_CONFLICT,
                     detail="User with this email already exists"
                 )
+        if user_in.username:
+            existing_user = crud_user.get_by_username(session=session, username=user_in.username)
+            if existing_user and existing_user.user_id != current_user.user_id:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="User with this username already exists"
+                )
         return crud_user.update(session=session, db_user=current_user, user_in=user_in)
 
     def update_user_admin(self, session: Session, user_id: UUID, user_in: UserUpdate) -> Users:
