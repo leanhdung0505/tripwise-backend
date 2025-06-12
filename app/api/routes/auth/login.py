@@ -151,3 +151,13 @@ async def send_test_notification(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Internal server error: {str(e)}"
         )
+class RefreshRequest(BaseModel):
+    refresh_token: str
+
+@router.post("/refresh", response_model=LoginResponse)
+def refresh_access_token(
+    session: SessionDep,
+    data: RefreshRequest
+):
+    token = auth_service.refresh_token(session=session, refresh_token=data.refresh_token)
+    return LoginResponse(data=token)
