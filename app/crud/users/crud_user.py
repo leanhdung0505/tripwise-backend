@@ -51,6 +51,9 @@ class CRUDUser:
         session.refresh(user)
         return user
 
+    def get_by_id(self, session: Session, user_id) -> Optional[Users]:
+        return session.get(Users, user_id)
+
 # Create and export an instance
 crud_user = CRUDUser()
 
