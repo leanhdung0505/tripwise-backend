@@ -8,7 +8,7 @@ from typing import Optional
 
 from app.crud.users.crud_user import crud_user
 from app.core.config import settings
-from app.core.security import create_access_token
+from app.core.security import create_access_token, create_refresh_token
 from app.models import Users
 from app.repository.request.user_request import UserCreate
 from app.models import GoogleUserInfo
@@ -104,8 +104,9 @@ class GoogleAuthService:
         
         # Create access token
         access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-        token = create_access_token(user.user_id, expires_delta=access_token_expires)
+        access_token = create_access_token(user.user_id)
+        refresh_token = create_refresh_token(user.user_id)
         
-        return Token(access_token=token)
+        return Token(access_token=access_token, refresh_token=refresh_token)
 
 google_auth_service = GoogleAuthService()

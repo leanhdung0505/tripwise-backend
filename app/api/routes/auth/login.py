@@ -12,7 +12,7 @@ from app.services.auth.auth_service import auth_service
 from app.repository.response.user_response import UserResponse
 from app.repository.response.login_response import LoginResponse, Token
 from app.services.fcm.fcm_service import fcm_service
-from app.core.security import create_access_token
+from app.core.security import create_access_token, create_refresh_token
 from app.core.config import settings
 
 router = APIRouter(prefix="/login", tags=["auth"])
@@ -50,9 +50,9 @@ def admin_login_access_token(
             detail="Access denied. Admin role required."
         )
 
-    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    token = create_access_token(user.user_id, expires_delta=access_token_expires)
-    return LoginResponse(data=Token(access_token=token))
+    access_token = create_access_token(user.user_id)
+    refresh_token = create_refresh_token(user.user_id)
+    return LoginResponse(data=Token(access_token=access_token, refresh_token=refresh_token))
 
 @router.post("/test-token", response_model=UserResponse)
 def test_token(current_user: CurrentUser):
@@ -151,3 +151,13 @@ async def send_test_notification(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Internal server error: {str(e)}"
         )
+class RefreshRequest(BaseModel):
+    refresh_token: str
+
+@router.post("/refresh", response_model=LoginResponse)
+def refresh_access_token(
+    session: SessionDep,
+    data: RefreshRequest
+):
+    token = auth_service.refresh_token(session=session, refresh_token=data.refresh_token)
+    return LoginResponse(data=token)

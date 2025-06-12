@@ -4,7 +4,7 @@ from sqlmodel import Session
 
 from app.crud.users.crud_user import crud_user
 from app.core.config import settings
-from app.core.security import create_access_token, get_password_hash, verify_password
+from app.core.security import create_access_token, create_refresh_token, get_password_hash, verify_password, verify_token
 from app.models import Message, ChangePassword, NewPassword
 from app.repository.response.login_response import Token
 from app.services.fcm.fcm_service import fcm_service
@@ -21,9 +21,9 @@ class AuthService:
 
         if fcm_token and device:
             fcm_service.register_token_on_login(session, user.user_id, fcm_token, device)
-        access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-        token = create_access_token(user.user_id, expires_delta=access_token_expires)
-        return Token(access_token=token)
+        access_token = create_access_token(user.user_id)
+        refresh_token = create_refresh_token(user.user_id)
+        return Token(access_token=access_token, refresh_token=refresh_token)
 
     @staticmethod
     def change_password(
@@ -83,5 +83,17 @@ class AuthService:
         """Logout user from all devices by deactivating all FCM tokens"""
         fcm_service.deactivate_all_user_tokens(session, user_id)
         return Message(detail="Logged out from all devices successfully")
+    
+    @staticmethod
+    def refresh_token(session: Session, refresh_token: str) -> Token:
+        payload = verify_token(refresh_token)
+        if payload.type != "refresh":
+            raise HTTPException(status_code=400, detail="Invalid refresh token")
+        user = crud_user.get_by_id(session=session, user_id=payload.sub)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        access_token = create_access_token(user.user_id)
+        new_refresh_token = create_refresh_token(user.user_id)
+        return Token(access_token=access_token, refresh_token=new_refresh_token)
     
 auth_service = AuthService()
