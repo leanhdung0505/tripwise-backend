@@ -129,5 +129,7 @@ class Settings(BaseSettings):
     CLOUDINARY_CLOUD_NAME: str
     CLOUDINARY_API_KEY: str
     CLOUDINARY_API_SECRET: str
+    PRIVATE_KEY_FIREBASE: str
+    PRIVATE_KEY_FIREBASE_ID: str
 
 settings = Settings()  # type: ignore
