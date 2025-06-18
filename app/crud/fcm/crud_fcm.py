@@ -3,15 +3,29 @@ from firebase_admin import credentials, messaging
 import os
 from typing import List, Dict, Any, Optional
 from sqlmodel import Session, select
-from app.models import FCMTokens
+from app.models import FCMTokens, Users
 from app.core.config import settings  # Assuming settings is imported from app.core.config
+
 class CRUDFcm:
     def __init__(self):
-        # Chỉ khởi tạo 1 lần
         if not firebase_admin._apps:
-            cred = credentials.Certificate(
-                settings.FIREBASE_CREDENTIAL_PATH  # Assuming settings is imported from app.core.config
-            )
+            private_key = settings.PRIVATE_KEY_FIREBASE.replace('\\n', '\n')
+            
+            cred_dict = {
+                "type": "service_account",
+                "project_id": "trip-wise-fca39",
+                "private_key_id": settings.PRIVATE_KEY_FIREBASE_ID,
+                "private_key": private_key,
+                "client_email": "firebase-adminsdk-fbsvc@trip-wise-fca39.iam.gserviceaccount.com",
+                "client_id": "113382632026197703412",
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40trip-wise-fca39.iam.gserviceaccount.com",
+                "universe_domain": "googleapis.com"
+            }
+            
+            cred = credentials.Certificate(cred_dict)
             firebase_admin.initialize_app(cred)
 
     def get_active_tokens(self, session: Session, user_id: str) -> List[FCMTokens]:
@@ -135,6 +149,43 @@ class CRUDFcm:
             session.commit()
             return True
         return False
+
+    def send_notification(
+        self,
+        *,
+        tokens: str | List[str],
+        title: str,
+        body: str,
+        data: dict = None
+    ) -> dict:
+        """
+        Gửi thông báo đến một hoặc nhiều token FCM
+        """
+        # Chuyển đổi token đơn lẻ thành list
+        if isinstance(tokens, str):
+            tokens = [tokens]
+
+        message = messaging.MulticastMessage(
+            tokens=tokens,
+            notification=messaging.Notification(
+                title=title,
+                body=body,
+            ),
+            data=data,
+        )
+
+        try:
+            response = messaging.send_multicast(message)
+            return {
+                "success": True,
+                "success_count": response.success_count,
+                "failure_count": response.failure_count,
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e)
+            }
 
 # Create and export an instance
 crud_fcm = CRUDFcm()
